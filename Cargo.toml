@@ -1,0 +1,46 @@
+[package]
+name = "tiop01-gui"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+default = []
+unix = []
+
+[lib]
+name = "main"
+crate_type = ["cdylib"]
+
+[[bin]]
+path = "src/lib.rs"
+name = "tiop01-gui"
+required-features = ["unix"]
+
+[dependencies]
+log = "0.4"
+byteorder = "1.4"
+scarlet = "1.2"
+itertools = "0.11"
+strum = "0.25"
+strum_macros = "0.25"
+image2 = { version = "1.9", default-features = false, features = [] }
+anyhow = "1.0"
+
+[target.'cfg(not(target_os = "android"))'.dependencies]
+eframe = { version = "0.23", default-features = false, features = ["default_fonts", "wgpu", "wayland"] }
+env_logger = "0.10"
+serialport = "4.2"
+
+[target.'cfg(target_os = "android")'.dependencies]
+eframe = { version = "0.23", default-features = false, features = ["default_fonts", "wgpu", "android-game-activity"] }
+winit = { version = "0.28", default-features = false, features = ["android-game-activity"] }
+pollster = "0.3"
+android_logger = "0.13"
+ndk-context = "0.1"
+jni = "0.21"
+
+[patch.crates-io]
+image2 = { git = "https://github.com/dobo90/image2-rs", branch = 'main' }
+scarlet = { git = "https://github.com/dobo90/scarlet", branch = 'master' }
