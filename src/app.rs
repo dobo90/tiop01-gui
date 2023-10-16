@@ -121,9 +121,7 @@ impl Tiop01App {
             last_frame_update: std::time::Instant::now(),
         }
     }
-}
 
-impl Tiop01App {
     fn receive_frame(&mut self) -> Option<thermal::RgbImage> {
         if let Ok(ProducerMessage::Frame(frame)) = self.receiver.try_recv() {
             let now = std::time::Instant::now();

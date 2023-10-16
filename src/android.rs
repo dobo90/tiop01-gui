@@ -102,7 +102,7 @@ impl<'a> SerialPortReader<'a> {
         let actx = borrow_actx.deref_mut();
 
         let ret = actx.env.with_local_frame(4, |env| {
-            let byte_array = env.new_byte_array(buf.len() as i32).unwrap();
+            let byte_array = env.new_byte_array(buf.len() as i32)?;
 
             let bytes_read = env
                 .call_method(&self.reader, "read", "([B)I", &[byte_array.deref().into()])?
@@ -110,7 +110,7 @@ impl<'a> SerialPortReader<'a> {
 
             if bytes_read > 0 {
                 // TODO: copy directly to buf (to avoid one additional copy)
-                let vec = env.convert_byte_array(byte_array).unwrap();
+                let vec = env.convert_byte_array(byte_array)?;
                 buf.copy_from_slice(&vec);
 
                 Ok(bytes_read as usize)

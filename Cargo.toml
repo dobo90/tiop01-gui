@@ -20,9 +20,9 @@ required-features = ["unix"]
 
 [dependencies]
 log = "0.4"
-byteorder = "1.4"
+byteorder = "1.5"
 scarlet = "1.2"
-itertools = "0.11"
+itertools = "0.12"
 strum = "0.25"
 strum_macros = "0.25"
 image2 = { version = "1.9", default-features = false, features = [] }
