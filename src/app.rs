@@ -179,6 +179,11 @@ impl Tiop01App {
             "Edge strategy",
         );
         ui.combobox_from_iter(ColorMap::iter(), &mut self.settings.colormap, "Color map");
+        ui.add(
+            egui::Slider::new(&mut self.settings.emissivity, 10..=100)
+                .prefix("0.")
+                .text("Emissivity"),
+        );
     }
 }
 

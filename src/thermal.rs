@@ -95,6 +95,7 @@ pub struct Settings {
     pub filtering_method: FilteringMethod,
     pub edge_strategy: EdgeStrategy,
     pub colormap: ColorMap,
+    pub emissivity: u8,
 }
 
 impl Default for Settings {
@@ -105,6 +106,7 @@ impl Default for Settings {
             filtering_method: FilteringMethod::Box3x3,
             edge_strategy: EdgeStrategy::Extend,
             colormap: ColorMap::Turbo,
+            emissivity: 95,
         }
     }
 }
@@ -121,8 +123,10 @@ impl Settings {
     }
 }
 
+pub trait ReadWrite: io::Read + io::Write {}
+
 pub trait ThermalPortOpener<'a> {
-    fn open(&mut self) -> anyhow::Result<Box<dyn io::Read + 'a>>;
+    fn open(&mut self) -> anyhow::Result<Box<dyn ReadWrite + 'a>>;
 }
 
 pub struct Frame {
@@ -133,7 +137,7 @@ pub struct Frame {
 
 pub struct ThermalImageProducer<'a> {
     opener: Box<dyn ThermalPortOpener<'a> + 'a>,
-    reader: Option<Box<dyn io::Read + 'a>>,
+    rw: Option<Box<dyn ReadWrite + 'a>>,
     settings: Settings,
     kernel: Option<Kernel>,
     sender: Sender<ProducerMessage>,
@@ -150,10 +154,10 @@ impl<'a> ThermalImageProducer<'a> {
     ) -> Self {
         let settings = Settings::default();
         let kernel = settings.get_kernel();
-        let reader = None;
+        let rw = None;
         Self {
             opener,
-            reader,
+            rw,
             settings,
             kernel,
             sender,
@@ -165,14 +169,17 @@ impl<'a> ThermalImageProducer<'a> {
 
 impl<'a> ThermalImageProducer<'a> {
     fn ensure_port_opened(&mut self) {
-        if self.reader.is_some() {
+        if self.rw.is_some() {
             return;
         }
 
         match self.opener.open() {
-            Ok(reader) => self.reader = Some(reader),
+            Ok(rw) => {
+                self.rw = Some(rw);
+                self.write_emissivity();
+            }
             Err(e) => {
-                log::warn!("Failed to create reader: {e}. Sleeping for 1 sec");
+                log::warn!("Failed to create rw: {e}. Sleeping for 1 sec");
                 thread::sleep(Duration::from_secs(1));
             }
         }
@@ -182,7 +189,7 @@ impl<'a> ThermalImageProducer<'a> {
         let mut imgbuf = thermal::GrayImage::new(THERMAL_IMAGE_SIZE);
 
         let r = self
-            .reader
+            .rw
             .as_mut()
             .unwrap()
             .read_u16_into::<LittleEndian>(imgbuf.data_mut());
@@ -191,7 +198,7 @@ impl<'a> ThermalImageProducer<'a> {
             Ok(_) => Some(imgbuf),
             Err(e) => {
                 log::error!("Failed to read from serial port: {e}");
-                self.reader = None;
+                self.rw = None;
                 None
             }
         }
@@ -242,6 +249,18 @@ impl<'a> ThermalImageProducer<'a> {
         }
     }
 
+    fn write_emissivity(&mut self) {
+        if let Some(rw) = &mut self.rw {
+            let mut command: [u8; 4] = [0x55, 0x01, self.settings.emissivity, 0x00];
+            let checksum: u8 = command.iter().sum();
+            command[3] = checksum;
+
+            if let Err(err) = rw.write_all(&command) {
+                log::error!("Failed to write emissivity {err}");
+            }
+        }
+    }
+
     pub fn main_loop(&mut self) {
         loop {
             self.ensure_port_opened();
@@ -249,13 +268,12 @@ impl<'a> ThermalImageProducer<'a> {
             if let Ok(UiMessage::ChangeSettings(new_settings)) = self.receiver.try_recv() {
                 self.settings = new_settings.clone();
                 self.kernel = self.settings.get_kernel();
+                self.write_emissivity();
             }
 
-            if self.reader.is_some() {
-                let gray_image = self.read_image();
-
-                if gray_image.is_some() {
-                    self.produce_thermal_frame(gray_image.as_ref().unwrap());
+            if self.rw.is_some() {
+                if let Some(gray_image) = self.read_image().as_mut() {
+                    self.produce_thermal_frame(gray_image);
                 }
             }
         }

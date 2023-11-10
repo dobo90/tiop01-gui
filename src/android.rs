@@ -5,7 +5,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::thermal::ThermalPortOpener;
+use crate::thermal::{ReadWrite, ThermalPortOpener};
 
 use anyhow::anyhow;
 use jni::objects::{JClass, JObject};
@@ -37,9 +37,9 @@ impl<'a> SerialPortOpener<'a> {
 }
 
 impl<'a> ThermalPortOpener<'a> for SerialPortOpener<'a> {
-    fn open(&mut self) -> anyhow::Result<Box<dyn io::Read + 'a>> {
-        let mut borrow_actx = self.actx.borrow_mut();
-        let actx = borrow_actx.deref_mut();
+    fn open(&mut self) -> anyhow::Result<Box<dyn ReadWrite + 'a>> {
+        let mut borrowed_actx = self.actx.borrow_mut();
+        let actx = borrowed_actx.deref_mut();
 
         let ret = actx.env.with_local_frame(4, |env| {
             let class_loader = env
@@ -52,7 +52,7 @@ impl<'a> ThermalPortOpener<'a> for SerialPortOpener<'a> {
                 .l()?;
 
             let class_name =
-                env.new_string("com/github/dobo90/tiop01_gui_android/SerialPortReader")?;
+                env.new_string("com/github/dobo90/tiop01_gui_android/SerialPortReadWrite")?;
             let reader_class: JClass = env
                 .call_method(
                     &class_loader,
@@ -67,7 +67,7 @@ impl<'a> ThermalPortOpener<'a> for SerialPortOpener<'a> {
                 .call_static_method(
                     &reader_class,
                     "openReader",
-                    "()Lcom/github/dobo90/tiop01_gui_android/SerialPortReader;",
+                    "()Lcom/github/dobo90/tiop01_gui_android/SerialPortReadWrite;",
                     &[],
                 )?
                 .l()?;
@@ -98,8 +98,8 @@ impl<'a> SerialPortReader<'a> {
     }
 
     fn read(&mut self, buf: &mut [u8]) -> anyhow::Result<usize> {
-        let mut borrow_actx = self.actx.borrow_mut();
-        let actx = borrow_actx.deref_mut();
+        let mut borrowed_actx = self.actx.borrow_mut();
+        let actx = borrowed_actx.deref_mut();
 
         let ret = actx.env.with_local_frame(4, |env| {
             let byte_array = env.new_byte_array(buf.len() as i32)?;
@@ -115,7 +115,31 @@ impl<'a> SerialPortReader<'a> {
 
                 Ok(bytes_read as usize)
             } else {
-                Err(anyhow!("Reader has returned negative value: {bytes_read}"))
+                Err(anyhow!("JNI read failed: {bytes_read}"))
+            }
+        });
+
+        match ret {
+            Ok(ret) => Ok(ret),
+            Err(e) => Err(anyhow!("{e}")),
+        }
+    }
+
+    fn write(&mut self, buf: &[u8]) -> anyhow::Result<usize> {
+        let mut borrowed_actx = self.actx.borrow_mut();
+        let actx = borrowed_actx.deref_mut();
+
+        let ret = actx.env.with_local_frame(4, |env| {
+            let byte_array = env.byte_array_from_slice(buf)?;
+
+            let bytes_written = env
+                .call_method(&self.reader, "write", "([B)I", &[byte_array.deref().into()])?
+                .i()?;
+
+            if bytes_written > 0 {
+                Ok(bytes_written as usize)
+            } else {
+                Err(anyhow!("JNI write failed: {bytes_written}"))
             }
         });
 
@@ -129,7 +153,7 @@ impl<'a> SerialPortReader<'a> {
 impl<'a> io::Read for SerialPortReader<'a> {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize, io::Error> {
         match self.read(buf) {
-            Ok(r) => Ok(r),
+            Ok(n) => Ok(n),
             Err(e) => {
                 log::error!("SerialPortReader::read failed: {e}");
                 Err(io::ErrorKind::Other.into())
@@ -137,3 +161,21 @@ impl<'a> io::Read for SerialPortReader<'a> {
         }
     }
 }
+
+impl<'a> io::Write for SerialPortReader<'a> {
+    fn write(&mut self, buf: &[u8]) -> Result<usize, io::Error> {
+        match self.write(buf) {
+            Ok(n) => Ok(n),
+            Err(e) => {
+                log::error!("SerialPortReader::write failed: {e}");
+                Err(io::ErrorKind::Other.into())
+            }
+        }
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+impl<'a> ReadWrite for SerialPortReader<'a> {}

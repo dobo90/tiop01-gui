@@ -1,6 +1,7 @@
-use crate::thermal::ThermalPortOpener;
+use crate::thermal::{ReadWrite, ThermalPortOpener};
 
 use anyhow::anyhow;
+use serialport::SerialPort;
 use std::{io, marker::PhantomData, time::Duration};
 
 pub struct SerialPortOpener<'a> {
@@ -15,8 +16,28 @@ impl<'a> SerialPortOpener<'a> {
     }
 }
 
+struct ThermalReadWrite(Box<dyn SerialPort>);
+
+impl io::Read for ThermalReadWrite {
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize, io::Error> {
+        self.0.read(buf)
+    }
+}
+
+impl io::Write for ThermalReadWrite {
+    fn write(&mut self, buf: &[u8]) -> Result<usize, io::Error> {
+        self.0.write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.0.flush()
+    }
+}
+
+impl ReadWrite for ThermalReadWrite {}
+
 impl<'a> ThermalPortOpener<'a> for SerialPortOpener<'a> {
-    fn open(&mut self) -> anyhow::Result<Box<dyn io::Read + 'a>> {
+    fn open(&mut self) -> anyhow::Result<Box<dyn ReadWrite + 'a>> {
         let mut port_path: Option<String> = None;
 
         for port in serialport::available_ports()? {
@@ -34,7 +55,7 @@ impl<'a> ThermalPortOpener<'a> for SerialPortOpener<'a> {
                     .open();
 
                 match port {
-                    Ok(port) => Ok(Box::new(port)),
+                    Ok(port) => Ok(Box::new(ThermalReadWrite(port))),
                     Err(e) => Err(anyhow!("Failed to open port: {e}")),
                 }
             }
