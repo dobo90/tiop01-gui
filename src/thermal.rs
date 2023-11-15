@@ -7,7 +7,7 @@ use eframe::egui;
 use image2::Kernel;
 use itertools::{Itertools, MinMaxResult};
 use scarlet::colormap::{GradientColorMap, ListedColorMap};
-use std::sync::mpsc::{Receiver, Sender};
+use std::sync::mpsc::{Receiver, Sender, TryRecvError};
 use std::time::Duration;
 use std::{io, thread};
 use strum_macros::EnumIter;
@@ -265,7 +265,21 @@ impl<'a> ThermalImageProducer<'a> {
         loop {
             self.ensure_port_opened();
 
-            if let Ok(UiMessage::ChangeSettings(new_settings)) = self.receiver.try_recv() {
+            let new_settings: Option<Settings> = {
+                let mut received_settings: Option<Settings> = None;
+
+                loop {
+                    match self.receiver.try_recv() {
+                        Ok(UiMessage::ChangeSettings(settings)) => {
+                            received_settings = Some(settings)
+                        }
+                        Err(TryRecvError::Disconnected) => break received_settings,
+                        Err(TryRecvError::Empty) => break received_settings,
+                    }
+                }
+            };
+
+            if let Some(new_settings) = &new_settings {
                 self.settings = new_settings.clone();
                 self.kernel = self.settings.get_kernel();
                 self.write_emissivity();
