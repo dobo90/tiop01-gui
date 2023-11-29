@@ -36,15 +36,23 @@ pub fn generate_black_image(width: usize, height: usize) -> thermal::RgbImage {
     imgbuf
 }
 
+pub fn map_to_scaled_value(input: u16, min: u16, max: u16, color_range: u8) -> f64 {
+    let color_range = color_range as f64 / 100.0;
+    let value = ((input - min) as f64) / ((max - min) as f64);
+
+    ((1.0 - color_range) / 2.0) + value * color_range
+}
+
 pub fn generate_colormap_image(
     width: usize,
     height: usize,
     cmap: &(dyn scarlet::colormap::ColorMap<scarlet::color::RGBColor> + Sync),
+    color_range: u8,
 ) -> thermal::RgbImage {
     let mut imgbuf = thermal::RgbImage::new([width, height]);
 
     imgbuf.each_pixel_mut(|pt, pixel| {
-        let scaled_value = pt.x as f64 / width as f64;
+        let scaled_value = map_to_scaled_value(pt.x as u16, 0, (width - 1) as u16, color_range);
         let color: RGBColor = cmap.transform_single(scaled_value);
 
         pixel.copy_from_slice([color.int_r(), color.int_g(), color.int_b()]);

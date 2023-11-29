@@ -140,11 +140,12 @@ impl Tiop01App {
         }
     }
 
-    fn regenerate_colormap(&mut self, ctx: &egui::Context) {
+    fn regenerate_colormap(&mut self, ctx: &egui::Context, color_range: u8) {
         let image = image_utils::generate_colormap_image(
             256,
             1,
             self.settings.colormap.get_colormap().deref(),
+            color_range,
         );
         let ci = egui::ColorImage::from_rgb(image.size().into(), image.data());
         self.colormap_texture = Some(ctx.load_texture("colormap", ci, Default::default()));
@@ -184,6 +185,11 @@ impl Tiop01App {
                 .prefix("0.")
                 .text("Emissivity"),
         );
+        ui.add(
+            egui::Slider::new(&mut self.settings.color_range, 0..=100)
+                .suffix("%")
+                .text("Color range"),
+        );
     }
 }
 
@@ -202,7 +208,7 @@ impl eframe::App for Tiop01App {
         }
 
         if self.colormap_texture.is_none() {
-            self.regenerate_colormap(ctx);
+            self.regenerate_colormap(ctx, self.settings.color_range);
         }
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
@@ -237,8 +243,10 @@ impl eframe::App for Tiop01App {
                 .sender
                 .send(UiMessage::ChangeSettings(self.settings.clone()));
 
-            if old_settings.colormap != self.settings.colormap {
-                self.regenerate_colormap(ctx);
+            if old_settings.colormap != self.settings.colormap
+                || old_settings.color_range != self.settings.color_range
+            {
+                self.regenerate_colormap(ctx, self.settings.color_range);
             }
         }
     }

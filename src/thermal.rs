@@ -1,5 +1,5 @@
 use crate::app::{ProducerMessage, UiMessage};
-use crate::image_utils;
+use crate::image_utils::{self, map_to_scaled_value};
 use crate::thermal;
 
 use byteorder::{LittleEndian, ReadBytesExt};
@@ -102,6 +102,7 @@ pub struct Settings {
     pub edge_strategy: EdgeStrategy,
     pub colormap: ColorMap,
     pub emissivity: u8,
+    pub color_range: u8,
 }
 
 impl Default for Settings {
@@ -113,6 +114,7 @@ impl Default for Settings {
             edge_strategy: EdgeStrategy::Extend,
             colormap: ColorMap::Turbo,
             emissivity: 95,
+            color_range: 100,
         }
     }
 }
@@ -217,6 +219,7 @@ impl<'a> ThermalImageProducer<'a> {
             .map(|kernel| gray_image.run(kernel.clone(), None));
 
         let filtered = filtered.as_ref().unwrap_or(gray_image);
+        let color_range = self.settings.color_range;
 
         if let MinMaxResult::MinMax(min, max) = filtered
             .iter()
@@ -227,8 +230,8 @@ impl<'a> ThermalImageProducer<'a> {
             let colormap = self.settings.colormap.get_colormap();
 
             imgbuf.each_pixel_mut(|pt, pixel| {
-                let scaled_value = ((filtered.get([pt.x, pt.y]).as_slice()[0] - min) as f64)
-                    / ((max - min) as f64);
+                let current_pixel = filtered.get([pt.x, pt.y]).as_slice()[0];
+                let scaled_value = map_to_scaled_value(current_pixel, min, max, color_range);
 
                 let color = colormap.transform_single(scaled_value);
                 pixel.copy_from_slice([color.int_r(), color.int_g(), color.int_b()]);
