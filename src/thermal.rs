@@ -42,6 +42,7 @@ pub enum ColorMap {
     Breeze,
     Mist,
     LinearBlueRed,
+    LinearBlackWhite,
 }
 
 impl FilteringMethod {
@@ -83,6 +84,11 @@ impl ColorMap {
                 let blue = scarlet::color::RGBColor::from_hex_code("#0000FF").unwrap();
                 let red = scarlet::color::RGBColor::from_hex_code("#FF0000").unwrap();
                 Box::new(GradientColorMap::new_linear(blue, red))
+            }
+            ColorMap::LinearBlackWhite => {
+                let black = scarlet::color::RGBColor::from_hex_code("#000000").unwrap();
+                let white = scarlet::color::RGBColor::from_hex_code("#FFFFFF").unwrap();
+                Box::new(GradientColorMap::new_linear(black, white))
             }
         }
     }
