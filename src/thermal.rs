@@ -150,12 +150,12 @@ pub struct ThermalImageProducer<'a> {
     kernel: Option<Kernel>,
     sender: Sender<ProducerMessage>,
     receiver: Receiver<UiMessage>,
-    egui_ctx: &'a egui::Context,
+    egui_ctx: egui::Context,
 }
 
 impl<'a> ThermalImageProducer<'a> {
     pub fn new(
-        egui_ctx: &'a egui::Context,
+        egui_ctx: egui::Context,
         sender: Sender<ProducerMessage>,
         receiver: Receiver<UiMessage>,
         opener: Box<dyn ThermalPortOpener<'a> + 'a>,

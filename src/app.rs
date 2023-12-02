@@ -69,7 +69,7 @@ fn producer_main(
 
     let opener = Box::new(SerialPortOpener::new());
 
-    let mut producer = ThermalImageProducer::new(&egui_ctx, worker_sender, worker_receiver, opener);
+    let mut producer = ThermalImageProducer::new(egui_ctx, worker_sender, worker_receiver, opener);
     producer.main_loop();
 }
 #[cfg(target_os = "android")]
@@ -92,7 +92,7 @@ fn producer_main(
     let actx = AndroidCtx::new(env, context);
     let opener = Box::new(SerialPortOpener::new(Rc::new(RefCell::new(actx))));
 
-    let mut producer = ThermalImageProducer::new(&egui_ctx, worker_sender, worker_receiver, opener);
+    let mut producer = ThermalImageProducer::new(egui_ctx, worker_sender, worker_receiver, opener);
     producer.main_loop();
 }
 
