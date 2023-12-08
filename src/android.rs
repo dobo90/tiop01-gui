@@ -25,7 +25,7 @@ pub struct SerialPortOpener<'a> {
     actx: Rc<RefCell<AndroidCtx<'a>>>,
 }
 
-pub struct SerialPortReader<'a> {
+pub struct SerialPortReadWrite<'a> {
     actx: Rc<RefCell<AndroidCtx<'a>>>,
     reader: jni::objects::GlobalRef,
 }
@@ -66,19 +66,19 @@ impl<'a> ThermalPortOpener<'a> for SerialPortOpener<'a> {
             let reader = env
                 .call_static_method(
                     &reader_class,
-                    "openReader",
+                    "open",
                     "()Lcom/github/dobo90/tiop01_gui_android/SerialPortReadWrite;",
                     &[],
                 )?
                 .l()?;
 
             if !reader.is_null() {
-                Ok(Box::new(SerialPortReader::new(
+                Ok(Box::new(SerialPortReadWrite::new(
                     Rc::clone(&self.actx),
                     env.new_global_ref(reader)?,
                 )))
             } else {
-                Err(anyhow!("openReader has returned null"))
+                Err(anyhow!("open has returned null"))
             }
         });
 
@@ -92,7 +92,7 @@ impl<'a> ThermalPortOpener<'a> for SerialPortOpener<'a> {
     }
 }
 
-impl<'a> SerialPortReader<'a> {
+impl<'a> SerialPortReadWrite<'a> {
     fn new(actx: Rc<RefCell<AndroidCtx<'a>>>, reader: jni::objects::GlobalRef) -> Self {
         Self { actx, reader }
     }
@@ -150,24 +150,24 @@ impl<'a> SerialPortReader<'a> {
     }
 }
 
-impl<'a> io::Read for SerialPortReader<'a> {
+impl<'a> io::Read for SerialPortReadWrite<'a> {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize, io::Error> {
         match self.read(buf) {
             Ok(n) => Ok(n),
             Err(e) => {
-                log::error!("SerialPortReader::read failed: {e}");
+                log::error!("SerialPortReadWrite::read failed: {e}");
                 Err(io::ErrorKind::Other.into())
             }
         }
     }
 }
 
-impl<'a> io::Write for SerialPortReader<'a> {
+impl<'a> io::Write for SerialPortReadWrite<'a> {
     fn write(&mut self, buf: &[u8]) -> Result<usize, io::Error> {
         match self.write(buf) {
             Ok(n) => Ok(n),
             Err(e) => {
-                log::error!("SerialPortReader::write failed: {e}");
+                log::error!("SerialPortReadWrite::write failed: {e}");
                 Err(io::ErrorKind::Other.into())
             }
         }
@@ -178,4 +178,4 @@ impl<'a> io::Write for SerialPortReader<'a> {
     }
 }
 
-impl<'a> ReadWrite for SerialPortReader<'a> {}
+impl<'a> ReadWrite for SerialPortReadWrite<'a> {}
