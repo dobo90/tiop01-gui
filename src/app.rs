@@ -194,9 +194,10 @@ impl Tiop01App {
 }
 
 impl eframe::App for Tiop01App {
-    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-        let window_size = frame.info().window_info.size;
-        let use_panels = 1.5 * window_size.x > window_size.y;
+    fn update(&mut self, ctx: &egui::Context, _: &mut eframe::Frame) {
+        let screen_size = ctx.screen_rect();
+        let use_panels = 1.5 * screen_size.width() > screen_size.height();
+
         let old_settings = self.settings.clone();
 
         let image = self.receive_frame();
