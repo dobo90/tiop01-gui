@@ -143,8 +143,8 @@ pub struct Frame {
     pub max: f64,
 }
 
-pub struct ThermalImageProducer<'a> {
-    opener: Box<dyn ThermalPortOpener<'a> + 'a>,
+pub struct ThermalImageProducer<'a, T: ThermalPortOpener<'a> + 'a> {
+    opener: T,
     rw: Option<Box<dyn ReadWrite + 'a>>,
     settings: Settings,
     kernel: Option<Kernel>,
@@ -153,12 +153,12 @@ pub struct ThermalImageProducer<'a> {
     egui_ctx: egui::Context,
 }
 
-impl<'a> ThermalImageProducer<'a> {
+impl<'a, T: ThermalPortOpener<'a> + 'a> ThermalImageProducer<'a, T> {
     pub fn new(
         egui_ctx: egui::Context,
         sender: Sender<ProducerMessage>,
         receiver: Receiver<UiMessage>,
-        opener: Box<dyn ThermalPortOpener<'a> + 'a>,
+        opener: T,
     ) -> Self {
         let settings = Settings::default();
         let kernel = settings.get_kernel();
@@ -173,9 +173,7 @@ impl<'a> ThermalImageProducer<'a> {
             egui_ctx,
         }
     }
-}
 
-impl<'a> ThermalImageProducer<'a> {
     fn ensure_port_opened(&mut self) {
         if self.rw.is_some() {
             return;

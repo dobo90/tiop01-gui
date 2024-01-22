@@ -67,7 +67,7 @@ fn producer_main(
 ) {
     use crate::unix::SerialPortOpener;
 
-    let opener = Box::new(SerialPortOpener::new());
+    let opener = SerialPortOpener::new();
 
     let mut producer = ThermalImageProducer::new(egui_ctx, worker_sender, worker_receiver, opener);
     producer.main_loop();
@@ -90,7 +90,7 @@ fn producer_main(
     let env = jvm.attach_current_thread_permanently().unwrap();
 
     let actx = AndroidCtx::new(env, context);
-    let opener = Box::new(SerialPortOpener::new(Rc::new(RefCell::new(actx))));
+    let opener = SerialPortOpener::new(Rc::new(RefCell::new(actx)));
 
     let mut producer = ThermalImageProducer::new(egui_ctx, worker_sender, worker_receiver, opener);
     producer.main_loop();
