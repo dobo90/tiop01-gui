@@ -30,7 +30,7 @@ pub struct SerialPortOpener<'a> {
 
 pub struct SerialPortReadWrite<'a> {
     actx: Rc<RefCell<AndroidCtx<'a>>>,
-    reader: jni::objects::GlobalRef,
+    rw: jni::objects::GlobalRef,
 }
 
 impl<'a> SerialPortOpener<'a> {
@@ -56,7 +56,7 @@ impl<'a> ThermalPortOpener<'a> for SerialPortOpener<'a> {
 
             let class_name =
                 env.new_string("com/github/dobo90/tiop01_gui_android/SerialPortReadWrite")?;
-            let reader_class: JClass = env
+            let rw_class: JClass = env
                 .call_method(
                     &class_loader,
                     "findClass",
@@ -66,19 +66,19 @@ impl<'a> ThermalPortOpener<'a> for SerialPortOpener<'a> {
                 .l()?
                 .into();
 
-            let reader = env
+            let rw = env
                 .call_static_method(
-                    &reader_class,
+                    &rw_class,
                     "open",
                     "()Lcom/github/dobo90/tiop01_gui_android/SerialPortReadWrite;",
                     &[],
                 )?
                 .l()?;
 
-            if !reader.is_null() {
+            if !rw.is_null() {
                 Ok(Box::new(SerialPortReadWrite::new(
                     Rc::clone(&self.actx),
-                    env.new_global_ref(reader)?,
+                    env.new_global_ref(rw)?,
                 )))
             } else {
                 Err(anyhow!("open has returned null"))
@@ -96,8 +96,8 @@ impl<'a> ThermalPortOpener<'a> for SerialPortOpener<'a> {
 }
 
 impl<'a> SerialPortReadWrite<'a> {
-    fn new(actx: Rc<RefCell<AndroidCtx<'a>>>, reader: jni::objects::GlobalRef) -> Self {
-        Self { actx, reader }
+    fn new(actx: Rc<RefCell<AndroidCtx<'a>>>, rw: jni::objects::GlobalRef) -> Self {
+        Self { actx, rw }
     }
 
     fn read(&mut self, buf: &mut [u8]) -> anyhow::Result<usize> {
@@ -108,7 +108,7 @@ impl<'a> SerialPortReadWrite<'a> {
             let byte_array = env.new_byte_array(buf.len() as i32)?;
 
             let bytes_read = env
-                .call_method(&self.reader, "read", "([B)I", &[byte_array.deref().into()])?
+                .call_method(&self.rw, "read", "([B)I", &[byte_array.deref().into()])?
                 .i()?;
 
             if bytes_read > 0 {
@@ -140,7 +140,7 @@ impl<'a> SerialPortReadWrite<'a> {
             let byte_array = env.byte_array_from_slice(buf)?;
 
             let bytes_written = env
-                .call_method(&self.reader, "write", "([B)I", &[byte_array.deref().into()])?
+                .call_method(&self.rw, "write", "([B)I", &[byte_array.deref().into()])?
                 .i()?;
 
             if bytes_written > 0 {
