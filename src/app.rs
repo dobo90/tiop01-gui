@@ -1,7 +1,7 @@
 use crate::image_utils;
 use crate::thermal::{
     self, ColorMap, EdgeStrategy, FilteringMethod, Frame, Settings, ThermalImageProducer,
-    THERMAL_IMAGE_HEIGHT, THERMAL_IMAGE_WIDTH,
+    ThermalPortOpener, THERMAL_IMAGE_HEIGHT, THERMAL_IMAGE_WIDTH,
 };
 
 use std::fmt::Debug;
@@ -65,13 +65,11 @@ fn producer_main(
     worker_sender: Sender<ProducerMessage>,
     worker_receiver: Receiver<UiMessage>,
 ) {
-    use crate::unix::SerialPortOpener;
+    let opener = crate::unix::SerialPortOpener::new();
 
-    let opener = SerialPortOpener::new();
-
-    let mut producer = ThermalImageProducer::new(egui_ctx, worker_sender, worker_receiver, opener);
-    producer.main_loop();
+    producer_main_loop(egui_ctx, worker_sender, worker_receiver, opener);
 }
+
 #[cfg(target_os = "android")]
 fn producer_main(
     egui_ctx: egui::Context,
@@ -92,6 +90,15 @@ fn producer_main(
     let actx = AndroidCtx::new(env, context);
     let opener = SerialPortOpener::new(Rc::new(RefCell::new(actx)));
 
+    producer_main_loop(egui_ctx, worker_sender, worker_receiver, opener);
+}
+
+fn producer_main_loop<'a, T: ThermalPortOpener<'a> + 'a>(
+    egui_ctx: egui::Context,
+    worker_sender: Sender<ProducerMessage>,
+    worker_receiver: Receiver<UiMessage>,
+    opener: T,
+) {
     let mut producer = ThermalImageProducer::new(egui_ctx, worker_sender, worker_receiver, opener);
     producer.main_loop();
 }
