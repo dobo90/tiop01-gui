@@ -1,4 +1,4 @@
-use crate::app::{ProducerMessage, UiMessage};
+use crate::app::{ConnectionStatus, ProducerMessage, UiMessage};
 use crate::image_utils::{self, map_to_scaled_value};
 use crate::thermal;
 
@@ -183,6 +183,7 @@ impl<'a, T: ThermalPortOpener<'a> + 'a> ThermalImageProducer<'a, T> {
             Ok(rw) => {
                 self.rw = Some(rw);
                 self.write_emissivity();
+                self.notify_ui_about_connection_status_change(ConnectionStatus::Connected);
             }
             Err(e) => {
                 log::warn!("Failed to create rw: {e}. Sleeping for 1 sec");
@@ -203,7 +204,10 @@ impl<'a, T: ThermalPortOpener<'a> + 'a> ThermalImageProducer<'a, T> {
             Ok(_) => Some(imgbuf),
             Err(e) => {
                 log::error!("Failed to read from serial port: {e}");
+
                 self.rw = None;
+                self.notify_ui_about_connection_status_change(ConnectionStatus::Disconnected);
+
                 None
             }
         }
@@ -264,6 +268,16 @@ impl<'a, T: ThermalPortOpener<'a> + 'a> ThermalImageProducer<'a, T> {
             if let Err(err) = rw.write_all(&command) {
                 log::error!("Failed to write emissivity {err}");
             }
+        }
+    }
+
+    fn notify_ui_about_connection_status_change(&mut self, status: ConnectionStatus) {
+        if self
+            .sender
+            .send(ProducerMessage::ConnectionStatusChange(status))
+            .is_ok()
+        {
+            self.egui_ctx.request_repaint();
         }
     }
 

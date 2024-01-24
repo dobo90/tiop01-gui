@@ -17,10 +17,17 @@ use strum::IntoEnumIterator;
 
 pub enum ProducerMessage {
     Frame(Frame),
+    ConnectionStatusChange(ConnectionStatus),
 }
 
 pub enum UiMessage {
     ChangeSettings(Settings),
+}
+
+#[derive(PartialEq)]
+pub enum ConnectionStatus {
+    Disconnected,
+    Connected,
 }
 
 trait ComboBoxFromIter {
@@ -48,8 +55,8 @@ impl ComboBoxFromIter for Ui {
 }
 
 pub struct Tiop01App {
-    thermal_image_texture: Option<egui::TextureHandle>,
-    colormap_texture: Option<egui::TextureHandle>,
+    thermal_image_texture: egui::TextureHandle,
+    colormap_texture: egui::TextureHandle,
     receiver: Receiver<ProducerMessage>,
     sender: Sender<UiMessage>,
     settings: Settings,
@@ -57,6 +64,7 @@ pub struct Tiop01App {
     max: f64,
     fps: f64,
     last_frame_update: std::time::Instant,
+    connection_status: ConnectionStatus,
 }
 
 #[cfg(not(target_os = "android"))]
@@ -116,64 +124,75 @@ impl Tiop01App {
             producer_main(egui_ctx, worker_sender, worker_receiver);
         });
 
+        let settings = Settings::default();
+        let thermal_image_texture = Self::load_texture_from_black_thermal_image(&cc.egui_ctx);
+        let colormap_texture = Self::load_texture_from_colormap_image(
+            &cc.egui_ctx,
+            settings.colormap.get_colormap().deref(),
+            settings.color_range,
+        );
+
         Self {
-            thermal_image_texture: None,
-            colormap_texture: None,
+            thermal_image_texture,
+            colormap_texture,
             receiver: ui_receiver,
             sender: ui_sender,
-            settings: Settings::default(),
+            settings,
             min: 0.0,
             max: 0.0,
             fps: 0.0,
             last_frame_update: std::time::Instant::now(),
+            connection_status: ConnectionStatus::Disconnected,
         }
     }
 
-    fn receive_frame(&mut self) -> Option<thermal::RgbImage> {
-        if let Ok(ProducerMessage::Frame(frame)) = self.receiver.try_recv() {
-            let now = std::time::Instant::now();
-            self.min = frame.min;
-            self.max = frame.max;
-            self.fps = 1.0 / (now - self.last_frame_update).as_secs_f64();
-            self.last_frame_update = now;
-            Some(frame.image)
-        } else if self.thermal_image_texture.is_none() {
-            Some(image_utils::generate_black_image(
-                THERMAL_IMAGE_WIDTH,
-                THERMAL_IMAGE_HEIGHT,
-            ))
-        } else {
-            None
-        }
+    fn receive_producer_message(&mut self) -> Option<ProducerMessage> {
+        self.receiver.try_recv().ok()
+    }
+
+    fn load_texture_from_image(
+        ctx: &egui::Context,
+        name: &str,
+        image: &image2::Image<u8, image2::Rgb>,
+    ) -> egui::TextureHandle {
+        let ci = egui::ColorImage::from_rgb(image.size().into(), image.data());
+        ctx.load_texture(name, ci, Default::default())
+    }
+
+    fn load_texture_from_black_thermal_image(ctx: &egui::Context) -> egui::TextureHandle {
+        let image = image_utils::generate_black_image(THERMAL_IMAGE_WIDTH, THERMAL_IMAGE_HEIGHT);
+        Self::load_texture_from_image(ctx, "thermal_image", &image)
+    }
+
+    fn load_texture_from_colormap_image(
+        ctx: &egui::Context,
+        cmap: &(dyn scarlet::colormap::ColorMap<scarlet::color::RGBColor> + Sync),
+        color_range: u8,
+    ) -> egui::TextureHandle {
+        let image = image_utils::generate_colormap_image(256, 1, cmap, color_range);
+        Self::load_texture_from_image(ctx, "colormap", &image)
     }
 
     fn regenerate_colormap(&mut self, ctx: &egui::Context, color_range: u8) {
-        let image = image_utils::generate_colormap_image(
-            256,
-            1,
+        self.colormap_texture = Self::load_texture_from_colormap_image(
+            ctx,
             self.settings.colormap.get_colormap().deref(),
             color_range,
-        );
-        let ci = egui::ColorImage::from_rgb(image.size().into(), image.data());
-        self.colormap_texture = Some(ctx.load_texture("colormap", ci, Default::default()));
+        )
     }
 
     fn images(&self, ui: &mut Ui) {
         let x = ui.available_size().x;
 
-        if let Some(ref thermal_image_texture) = self.thermal_image_texture {
-            ui.image(SizedTexture {
-                id: thermal_image_texture.id(),
-                size: [x, x].into(),
-            });
-        }
+        ui.image(SizedTexture {
+            id: self.thermal_image_texture.id(),
+            size: [x, x].into(),
+        });
 
-        if let Some(ref colormap_texture) = self.colormap_texture {
-            ui.image(SizedTexture {
-                id: colormap_texture.id(),
-                size: [x, x / 10.0].into(),
-            });
-        }
+        ui.image(SizedTexture {
+            id: self.colormap_texture.id(),
+            size: [x, x / 10.0].into(),
+        });
     }
 
     fn settings(&mut self, ui: &mut Ui) {
@@ -211,17 +230,35 @@ impl eframe::App for Tiop01App {
         let use_panels = 1.5 * screen_size.width() > screen_size.height();
 
         let old_settings = self.settings.clone();
+        let message = self.receive_producer_message();
+        let mut image: Option<thermal::RgbImage> = None;
 
-        let image = self.receive_frame();
+        if let Some(message) = message {
+            match message {
+                ProducerMessage::ConnectionStatusChange(status) => {
+                    self.connection_status = status;
 
-        if let Some(image) = image {
-            let ci = egui::ColorImage::from_rgb(image.size().into(), image.data());
-            self.thermal_image_texture =
-                Some(ctx.load_texture("thermal_image", ci, Default::default()));
+                    if self.connection_status == ConnectionStatus::Disconnected {
+                        image = Some(image_utils::generate_black_image(
+                            THERMAL_IMAGE_WIDTH,
+                            THERMAL_IMAGE_HEIGHT,
+                        ));
+                    }
+                }
+                ProducerMessage::Frame(frame) => {
+                    let now = std::time::Instant::now();
+                    self.min = frame.min;
+                    self.max = frame.max;
+                    self.fps = 1.0 / (now - self.last_frame_update).as_secs_f64();
+                    self.last_frame_update = now;
+                    image = Some(frame.image);
+                }
+            }
         }
 
-        if self.colormap_texture.is_none() {
-            self.regenerate_colormap(ctx, self.settings.color_range);
+        if let Some(image) = image {
+            self.thermal_image_texture =
+                Self::load_texture_from_image(ctx, "thermal_image", &image);
         }
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
@@ -231,11 +268,16 @@ impl eframe::App for Tiop01App {
         });
 
         egui::TopBottomPanel::bottom("bottom_panel").show(ctx, |ui| {
-            ui.vertical_centered(|ui| {
-                ui.label(format!(
+            let text: String = match self.connection_status {
+                ConnectionStatus::Disconnected => "Disconnected".into(),
+                ConnectionStatus::Connected => format!(
                     "Min: {:.02}, max: {:.02}, FPS: {:.02}",
                     self.min, self.max, self.fps
-                ));
+                ),
+            };
+
+            ui.vertical_centered(|ui| {
+                ui.label(text);
             });
         });
 
