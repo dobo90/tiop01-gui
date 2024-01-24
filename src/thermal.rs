@@ -123,7 +123,7 @@ impl Settings {
     fn get_kernel(&self) -> Option<image2::Kernel> {
         let mut kernel = self.filtering_method.get_kernel();
 
-        if let Some(kernel) = &mut kernel {
+        if let Some(ref mut kernel) = kernel {
             kernel.set_edge_strategy(self.edge_strategy.get_edge_strategy());
         }
 
@@ -196,8 +196,7 @@ impl<'a, T: ThermalPortOpener<'a> + 'a> ThermalImageProducer<'a, T> {
 
         let r = self
             .rw
-            .as_mut()
-            .unwrap()
+            .as_mut()?
             .read_u16_into::<LittleEndian>(imgbuf.data_mut());
 
         match r {
@@ -257,7 +256,7 @@ impl<'a, T: ThermalPortOpener<'a> + 'a> ThermalImageProducer<'a, T> {
     }
 
     fn write_emissivity(&mut self) {
-        if let Some(rw) = &mut self.rw {
+        if let Some(ref mut rw) = self.rw {
             let mut command: [u8; 4] = [0x55, 0x01, self.settings.emissivity, 0x00];
             let checksum: u8 = command.iter().sum();
             command[3] = checksum;
@@ -286,16 +285,14 @@ impl<'a, T: ThermalPortOpener<'a> + 'a> ThermalImageProducer<'a, T> {
                 }
             };
 
-            if let Some(new_settings) = &new_settings {
+            if let Some(ref new_settings) = new_settings {
                 self.settings = new_settings.clone();
                 self.kernel = self.settings.get_kernel();
                 self.write_emissivity();
             }
 
-            if self.rw.is_some() {
-                if let Some(gray_image) = self.read_image().as_mut() {
-                    self.produce_thermal_frame(gray_image);
-                }
+            if let Some(ref mut gray_image) = self.read_image() {
+                self.produce_thermal_frame(gray_image);
             }
         }
     }

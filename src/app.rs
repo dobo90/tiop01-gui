@@ -161,14 +161,19 @@ impl Tiop01App {
     fn images(&self, ui: &mut Ui) {
         let x = ui.available_size().x;
 
-        ui.image(SizedTexture {
-            id: self.thermal_image_texture.as_ref().unwrap().id(),
-            size: [x, x].into(),
-        });
-        ui.image(SizedTexture {
-            id: self.colormap_texture.as_ref().unwrap().id(),
-            size: [x, x / 10.0].into(),
-        });
+        if let Some(ref thermal_image_texture) = self.thermal_image_texture {
+            ui.image(SizedTexture {
+                id: thermal_image_texture.id(),
+                size: [x, x].into(),
+            });
+        }
+
+        if let Some(ref colormap_texture) = self.colormap_texture {
+            ui.image(SizedTexture {
+                id: colormap_texture.id(),
+                size: [x, x / 10.0].into(),
+            });
+        }
     }
 
     fn settings(&mut self, ui: &mut Ui) {
