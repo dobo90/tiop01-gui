@@ -8,7 +8,10 @@ use std::{
 use crate::thermal::{ReadWrite, ThermalPortOpener};
 
 use anyhow::anyhow;
-use jni::objects::{JClass, JObject};
+use jni::{
+    objects::{JClass, JObject},
+    sys::jbyte,
+};
 
 pub struct AndroidCtx<'a> {
     env: jni::JNIEnv<'a>,
@@ -109,9 +112,13 @@ impl<'a> SerialPortReadWrite<'a> {
                 .i()?;
 
             if bytes_read > 0 {
-                // TODO: copy directly to buf (to avoid one additional copy)
-                let vec = env.convert_byte_array(byte_array)?;
-                buf.copy_from_slice(&vec);
+                // SAFETY: get_byte_array_region expects &mut [jbyte] that's why
+                // we have to cast from &mut [u8] to &mut [i8]
+                let buf_slice = unsafe {
+                    std::slice::from_raw_parts_mut(buf.as_mut_ptr() as *mut jbyte, buf.len())
+                };
+
+                env.get_byte_array_region(byte_array, 0, buf_slice)?;
 
                 Ok(bytes_read as usize)
             } else {
