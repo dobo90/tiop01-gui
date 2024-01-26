@@ -10,7 +10,7 @@ use scarlet::colormap::{GradientColorMap, ListedColorMap};
 use std::sync::mpsc::{Receiver, Sender, TryRecvError};
 use std::time::Duration;
 use std::{io, thread};
-use strum_macros::EnumIter;
+use strum_macros::{Display, EnumIter};
 
 pub type GrayImage = image2::Image<u16, image2::Gray>;
 pub type RgbImage = image2::Image<u8, image2::Rgb>;
@@ -19,14 +19,16 @@ pub const THERMAL_IMAGE_WIDTH: usize = 32;
 pub const THERMAL_IMAGE_HEIGHT: usize = 32;
 pub const THERMAL_IMAGE_SIZE: [usize; 2] = [THERMAL_IMAGE_WIDTH, THERMAL_IMAGE_HEIGHT];
 
-#[derive(Debug, Clone, PartialEq, EnumIter)]
+#[derive(Debug, Display, Clone, PartialEq, EnumIter)]
 pub enum FilteringMethod {
     None,
+    #[strum(to_string = "Box 3x3")]
     Box3x3,
+    #[strum(to_string = "Gaussian 3x3")]
     Gaussian3x3,
 }
 
-#[derive(Debug, Clone, PartialEq, EnumIter)]
+#[derive(Debug, Display, Clone, PartialEq, EnumIter)]
 pub enum EdgeStrategy {
     Constant,
     Extend,
@@ -34,14 +36,17 @@ pub enum EdgeStrategy {
     Mirror,
 }
 
-#[derive(Debug, Clone, PartialEq, EnumIter)]
+#[derive(Debug, Display, Clone, PartialEq, EnumIter)]
 pub enum ColorMap {
     Turbo,
     Magma,
+    #[strum(to_string = "Blue Red")]
     Bluered,
     Breeze,
     Mist,
+    #[strum(to_string = "Blue Red (linear)")]
     LinearBlueRed,
+    #[strum(to_string = "Black White (linear)")]
     LinearBlackWhite,
 }
 

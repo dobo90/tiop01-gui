@@ -4,7 +4,7 @@ use crate::thermal::{
     ThermalPortOpener, THERMAL_IMAGE_HEIGHT, THERMAL_IMAGE_WIDTH,
 };
 
-use std::fmt::Debug;
+use std::fmt::Display;
 use std::ops::Deref;
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
@@ -33,21 +33,21 @@ pub enum ConnectionStatus {
 trait ComboBoxFromIter {
     fn combobox_from_iter<V, I>(&mut self, iter: I, current_value: &mut V, label: &str)
     where
-        V: Debug + PartialEq,
+        V: Display + PartialEq,
         I: Iterator<Item = V>;
 }
 
 impl ComboBoxFromIter for Ui {
     fn combobox_from_iter<V, I>(&mut self, iter: I, current_value: &mut V, label: &str)
     where
-        V: Debug + PartialEq,
+        V: Display + PartialEq,
         I: Iterator<Item = V>,
     {
         egui::ComboBox::from_label(label)
-            .selected_text(format!("{:?}", current_value))
+            .selected_text(format!("{}", current_value))
             .show_ui(self, |ui| {
                 for selected_value in iter {
-                    let text = format!("{:?}", &selected_value);
+                    let text = format!("{}", &selected_value);
                     ui.selectable_value(current_value, selected_value, text);
                 }
             });
