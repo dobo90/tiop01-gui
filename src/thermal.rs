@@ -153,6 +153,7 @@ pub struct ThermalImageProducer<'a, T: ThermalPortOpener<'a> + 'a> {
     rw: Option<Box<dyn ReadWrite + 'a>>,
     settings: Settings,
     kernel: Option<Kernel>,
+    colormap: Box<dyn scarlet::colormap::ColorMap<scarlet::color::RGBColor> + Sync>,
     sender: Sender<ProducerMessage>,
     receiver: Receiver<UiMessage>,
     egui_ctx: egui::Context,
@@ -167,12 +168,15 @@ impl<'a, T: ThermalPortOpener<'a> + 'a> ThermalImageProducer<'a, T> {
     ) -> Self {
         let settings = Settings::default();
         let kernel = settings.get_kernel();
+        let colormap = settings.colormap.get_colormap();
         let rw = None;
+
         Self {
             opener,
             rw,
             settings,
             kernel,
+            colormap,
             sender,
             receiver,
             egui_ctx,
@@ -237,13 +241,12 @@ impl<'a, T: ThermalPortOpener<'a> + 'a> ThermalImageProducer<'a, T> {
             .minmax()
         {
             let mut imgbuf = thermal::RgbImage::new(THERMAL_IMAGE_SIZE);
-            let colormap = self.settings.colormap.get_colormap();
 
             imgbuf.each_pixel_mut(|pt, pixel| {
                 let current_pixel = filtered.get([pt.x, pt.y]).as_slice()[0];
                 let scaled_value = map_to_scaled_value(current_pixel, min, max, color_range);
 
-                let color = colormap.transform_single(scaled_value);
+                let color = self.colormap.transform_single(scaled_value);
                 pixel.copy_from_slice([color.int_r(), color.int_g(), color.int_b()]);
             });
 
@@ -301,6 +304,7 @@ impl<'a, T: ThermalPortOpener<'a> + 'a> ThermalImageProducer<'a, T> {
             if let Some(ref new_settings) = new_settings {
                 self.settings = new_settings.clone();
                 self.kernel = self.settings.get_kernel();
+                self.colormap = self.settings.colormap.get_colormap();
                 self.write_emissivity();
             }
 
