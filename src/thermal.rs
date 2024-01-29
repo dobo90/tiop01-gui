@@ -188,7 +188,9 @@ impl<'a, T: ThermalPortOpener<'a> + 'a> ThermalImageProducer<'a, T> {
             Ok(rw) => {
                 self.rw = Some(rw);
                 self.write_emissivity();
-                self.notify_ui_about_connection_status_change(ConnectionStatus::Connected);
+                self.send_message_to_ui(ProducerMessage::ConnectionStatusChange(
+                    ConnectionStatus::Connected,
+                ));
             }
             Err(e) => {
                 log::warn!("Failed to create rw: {e}. Sleeping for 1 sec");
@@ -211,7 +213,9 @@ impl<'a, T: ThermalPortOpener<'a> + 'a> ThermalImageProducer<'a, T> {
                 log::error!("Failed to read from serial port: {e}");
 
                 self.rw = None;
-                self.notify_ui_about_connection_status_change(ConnectionStatus::Disconnected);
+                self.send_message_to_ui(ProducerMessage::ConnectionStatusChange(
+                    ConnectionStatus::Disconnected,
+                ));
 
                 None
             }
@@ -250,17 +254,11 @@ impl<'a, T: ThermalPortOpener<'a> + 'a> ThermalImageProducer<'a, T> {
                 imgbuf = imgbuf.run(image_utils::Flip::Vertical, None);
             }
 
-            if self
-                .sender
-                .send(ProducerMessage::Frame(Frame {
-                    image: imgbuf,
-                    min: min as f64 / 10.0,
-                    max: max as f64 / 10.0,
-                }))
-                .is_ok()
-            {
-                self.egui_ctx.request_repaint();
-            }
+            self.send_message_to_ui(ProducerMessage::Frame(Frame {
+                image: imgbuf,
+                min: min as f64 / 10.0,
+                max: max as f64 / 10.0,
+            }));
         }
     }
 
@@ -276,12 +274,8 @@ impl<'a, T: ThermalPortOpener<'a> + 'a> ThermalImageProducer<'a, T> {
         }
     }
 
-    fn notify_ui_about_connection_status_change(&mut self, status: ConnectionStatus) {
-        if self
-            .sender
-            .send(ProducerMessage::ConnectionStatusChange(status))
-            .is_ok()
-        {
+    fn send_message_to_ui(&self, message: ProducerMessage) {
+        if self.sender.send(message).is_ok() {
             self.egui_ctx.request_repaint();
         }
     }
