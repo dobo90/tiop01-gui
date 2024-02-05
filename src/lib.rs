@@ -13,7 +13,7 @@ fn _main(native_options: NativeOptions) -> eframe::Result<()> {
     eframe::run_native(
         "Tiop01",
         native_options,
-        Box::new(|cc| Box::new(app::Tiop01App::new(cc))),
+        Box::new(|cc| Box::new(app::App::new(cc))),
     )
 }
 
@@ -31,7 +31,7 @@ fn main() -> Result<(), eframe::Error> {
 
 #[cfg(target_os = "android")]
 #[no_mangle]
-fn android_main(app: egui_winit::winit::platform::android::activity::AndroidApp) {
+extern "Rust" fn android_main(app: egui_winit::winit::platform::android::activity::AndroidApp) {
     use egui_winit::winit::platform::android::EventLoopBuilderExtAndroid;
 
     android_logger::init_once(

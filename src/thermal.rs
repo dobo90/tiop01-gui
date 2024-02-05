@@ -138,7 +138,7 @@ impl Settings {
 
 pub trait ReadWrite: io::Read + io::Write {}
 
-pub trait ThermalPortOpener<'a> {
+pub trait PortOpener<'a> {
     fn open(&mut self) -> anyhow::Result<Box<dyn ReadWrite + 'a>>;
 }
 
@@ -148,7 +148,7 @@ pub struct Frame {
     pub max: f64,
 }
 
-pub struct ThermalImageProducer<'a, T: ThermalPortOpener<'a> + 'a> {
+pub struct ImageProducer<'a, T: PortOpener<'a> + 'a> {
     opener: T,
     rw: Option<Box<dyn ReadWrite + 'a>>,
     settings: Settings,
@@ -159,7 +159,7 @@ pub struct ThermalImageProducer<'a, T: ThermalPortOpener<'a> + 'a> {
     egui_ctx: egui::Context,
 }
 
-impl<'a, T: ThermalPortOpener<'a> + 'a> ThermalImageProducer<'a, T> {
+impl<'a, T: PortOpener<'a> + 'a> ImageProducer<'a, T> {
     pub fn new(
         egui_ctx: egui::Context,
         sender: Sender<ProducerMessage>,
@@ -212,7 +212,7 @@ impl<'a, T: ThermalPortOpener<'a> + 'a> ThermalImageProducer<'a, T> {
             .read_u16_into::<LittleEndian>(imgbuf.data_mut());
 
         match r {
-            Ok(_) => Some(imgbuf),
+            Ok(()) => Some(imgbuf),
             Err(e) => {
                 log::error!("Failed to read from serial port: {e}");
 
@@ -259,8 +259,8 @@ impl<'a, T: ThermalPortOpener<'a> + 'a> ThermalImageProducer<'a, T> {
 
             self.send_message_to_ui(ProducerMessage::Frame(Frame {
                 image: imgbuf,
-                min: min as f64 / 10.0,
-                max: max as f64 / 10.0,
+                min: f64::from(min) / 10.0,
+                max: f64::from(max) / 10.0,
             }));
         }
     }
@@ -293,10 +293,11 @@ impl<'a, T: ThermalPortOpener<'a> + 'a> ThermalImageProducer<'a, T> {
                 loop {
                     match self.receiver.try_recv() {
                         Ok(UiMessage::ChangeSettings(settings)) => {
-                            received_settings = Some(settings)
+                            received_settings = Some(settings);
                         }
-                        Err(TryRecvError::Disconnected) => break received_settings,
-                        Err(TryRecvError::Empty) => break received_settings,
+                        Err(TryRecvError::Disconnected | TryRecvError::Empty) => {
+                            break received_settings
+                        }
                     }
                 }
             };

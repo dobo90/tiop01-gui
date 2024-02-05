@@ -1,18 +1,18 @@
 use crate::image_utils;
 use crate::thermal::{
-    self, ColorMap, EdgeStrategy, FilteringMethod, Frame, Settings, ThermalImageProducer,
-    ThermalPortOpener, THERMAL_IMAGE_HEIGHT, THERMAL_IMAGE_WIDTH,
+    self, ColorMap, EdgeStrategy, FilteringMethod, Frame, ImageProducer, PortOpener, Settings,
+    THERMAL_IMAGE_HEIGHT, THERMAL_IMAGE_WIDTH,
 };
 
 use std::fmt::Display;
-use std::ops::Deref;
+
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 
-use eframe::egui;
 use eframe::egui::load::SizedTexture;
 use eframe::egui::Ui;
+use eframe::egui::{self, TextureOptions};
 use strum::IntoEnumIterator;
 
 pub enum ProducerMessage {
@@ -44,17 +44,17 @@ impl ComboBoxFromIter for Ui {
         I: Iterator<Item = V>,
     {
         egui::ComboBox::from_label(label)
-            .selected_text(format!("{}", current_value))
+            .selected_text(current_value.to_string())
             .show_ui(self, |ui| {
                 for selected_value in iter {
-                    let text = format!("{}", &selected_value);
+                    let text = selected_value.to_string();
                     ui.selectable_value(current_value, selected_value, text);
                 }
             });
     }
 }
 
-pub struct Tiop01App {
+pub struct App {
     thermal_image_texture: egui::TextureHandle,
     colormap_texture: egui::TextureHandle,
     receiver: Receiver<ProducerMessage>,
@@ -84,7 +84,7 @@ fn producer_main(
     worker_sender: Sender<ProducerMessage>,
     worker_receiver: Receiver<UiMessage>,
 ) {
-    use crate::android::{AndroidCtx, SerialPortOpener};
+    use crate::android::{Context, SerialPortOpener};
     use jni::objects::JObject;
 
     use std::cell::RefCell;
@@ -95,23 +95,23 @@ fn producer_main(
     let context = unsafe { JObject::from_raw(ctx.context().cast()) };
     let env = jvm.attach_current_thread_permanently().unwrap();
 
-    let actx = AndroidCtx::new(env, context);
+    let actx = Context::new(env, context);
     let opener = SerialPortOpener::new(Rc::new(RefCell::new(actx)));
 
     producer_main_loop(egui_ctx, worker_sender, worker_receiver, opener);
 }
 
-fn producer_main_loop<'a, T: ThermalPortOpener<'a> + 'a>(
+fn producer_main_loop<'a, T: PortOpener<'a> + 'a>(
     egui_ctx: egui::Context,
     worker_sender: Sender<ProducerMessage>,
     worker_receiver: Receiver<UiMessage>,
     opener: T,
 ) {
-    let mut producer = ThermalImageProducer::new(egui_ctx, worker_sender, worker_receiver, opener);
+    let mut producer = ImageProducer::new(egui_ctx, worker_sender, worker_receiver, opener);
     producer.main_loop();
 }
 
-impl Tiop01App {
+impl App {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let egui_ctx = cc.egui_ctx.clone();
 
@@ -128,7 +128,7 @@ impl Tiop01App {
         let thermal_image_texture = Self::load_texture_from_black_thermal_image(&cc.egui_ctx);
         let colormap_texture = Self::load_texture_from_colormap_image(
             &cc.egui_ctx,
-            settings.colormap.get_colormap().deref(),
+            &*settings.colormap.get_colormap(),
             settings.color_range,
         );
 
@@ -156,7 +156,7 @@ impl Tiop01App {
         image: &image2::Image<u8, image2::Rgb>,
     ) -> egui::TextureHandle {
         let ci = egui::ColorImage::from_rgb(image.size().into(), image.data());
-        ctx.load_texture(name, ci, Default::default())
+        ctx.load_texture(name, ci, TextureOptions::default())
     }
 
     fn load_texture_from_black_thermal_image(ctx: &egui::Context) -> egui::TextureHandle {
@@ -176,9 +176,9 @@ impl Tiop01App {
     fn regenerate_colormap(&mut self, ctx: &egui::Context, color_range: u8) {
         self.colormap_texture = Self::load_texture_from_colormap_image(
             ctx,
-            self.settings.colormap.get_colormap().deref(),
+            &*self.settings.colormap.get_colormap(),
             color_range,
-        )
+        );
     }
 
     fn images(&self, ui: &mut Ui) {
@@ -224,7 +224,7 @@ impl Tiop01App {
     }
 }
 
-impl eframe::App for Tiop01App {
+impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _: &mut eframe::Frame) {
         let screen_size = ctx.screen_rect();
         let use_panels = 1.5 * screen_size.width() > screen_size.height();

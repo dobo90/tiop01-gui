@@ -1,4 +1,4 @@
-use crate::thermal::{ReadWrite, ThermalPortOpener};
+use crate::thermal::{PortOpener, ReadWrite};
 
 use anyhow::anyhow;
 use serialport::SerialPort;
@@ -36,7 +36,7 @@ impl io::Write for ThermalReadWrite {
 
 impl ReadWrite for ThermalReadWrite {}
 
-impl<'a> ThermalPortOpener<'a> for SerialPortOpener<'a> {
+impl<'a> PortOpener<'a> for SerialPortOpener<'a> {
     fn open(&mut self) -> anyhow::Result<Box<dyn ReadWrite + 'a>> {
         let mut port_path: Option<String> = None;
 

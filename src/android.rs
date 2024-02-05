@@ -1,11 +1,6 @@
-use std::{
-    cell::RefCell,
-    io,
-    ops::{Deref, DerefMut},
-    rc::Rc,
-};
+use std::{cell::RefCell, io, ops::Deref, rc::Rc};
 
-use crate::thermal::{ReadWrite, ThermalPortOpener};
+use crate::thermal::{PortOpener, ReadWrite};
 
 use anyhow::anyhow;
 use jni::{
@@ -13,36 +8,36 @@ use jni::{
     sys::jbyte,
 };
 
-pub struct AndroidCtx<'a> {
+pub struct Context<'a> {
     env: jni::JNIEnv<'a>,
     context: JObject<'a>,
 }
 
-impl<'a> AndroidCtx<'a> {
+impl<'a> Context<'a> {
     pub fn new(env: jni::JNIEnv<'a>, context: JObject<'a>) -> Self {
         Self { env, context }
     }
 }
 
 pub struct SerialPortOpener<'a> {
-    actx: Rc<RefCell<AndroidCtx<'a>>>,
+    actx: Rc<RefCell<Context<'a>>>,
 }
 
 pub struct SerialPortReadWrite<'a> {
-    actx: Rc<RefCell<AndroidCtx<'a>>>,
+    actx: Rc<RefCell<Context<'a>>>,
     rw: jni::objects::GlobalRef,
 }
 
 impl<'a> SerialPortOpener<'a> {
-    pub fn new(actx: Rc<RefCell<AndroidCtx<'a>>>) -> Self {
+    pub fn new(actx: Rc<RefCell<Context<'a>>>) -> Self {
         SerialPortOpener { actx }
     }
 }
 
-impl<'a> ThermalPortOpener<'a> for SerialPortOpener<'a> {
+impl<'a> PortOpener<'a> for SerialPortOpener<'a> {
     fn open(&mut self) -> anyhow::Result<Box<dyn ReadWrite + 'a>> {
         let mut borrowed_actx = self.actx.borrow_mut();
-        let actx = borrowed_actx.deref_mut();
+        let actx = &mut *borrowed_actx;
 
         let ret = actx.env.with_local_frame(4, |env| {
             let class_loader = env
@@ -75,13 +70,13 @@ impl<'a> ThermalPortOpener<'a> for SerialPortOpener<'a> {
                 )?
                 .l()?;
 
-            if !rw.is_null() {
+            if rw.is_null() {
+                Err(anyhow!("open has returned null"))
+            } else {
                 Ok(Box::new(SerialPortReadWrite::new(
                     Rc::clone(&self.actx),
                     env.new_global_ref(rw)?,
                 )))
-            } else {
-                Err(anyhow!("open has returned null"))
             }
         });
 
@@ -96,16 +91,16 @@ impl<'a> ThermalPortOpener<'a> for SerialPortOpener<'a> {
 }
 
 impl<'a> SerialPortReadWrite<'a> {
-    fn new(actx: Rc<RefCell<AndroidCtx<'a>>>, rw: jni::objects::GlobalRef) -> Self {
+    fn new(actx: Rc<RefCell<Context<'a>>>, rw: jni::objects::GlobalRef) -> Self {
         Self { actx, rw }
     }
 
     fn read(&mut self, buf: &mut [u8]) -> anyhow::Result<usize> {
         let mut borrowed_actx = self.actx.borrow_mut();
-        let actx = borrowed_actx.deref_mut();
+        let actx = &mut *borrowed_actx;
 
         let ret = actx.env.with_local_frame(4, |env| {
-            let byte_array = env.new_byte_array(buf.len() as i32)?;
+            let byte_array = env.new_byte_array(i32::try_from(buf.len())?)?;
 
             let bytes_read = env
                 .call_method(&self.rw, "read", "([B)I", &[byte_array.deref().into()])?
@@ -115,12 +110,12 @@ impl<'a> SerialPortReadWrite<'a> {
                 // SAFETY: get_byte_array_region expects &mut [jbyte] that's why
                 // we have to cast from &mut [u8] to &mut [i8]
                 let buf_slice = unsafe {
-                    std::slice::from_raw_parts_mut(buf.as_mut_ptr() as *mut jbyte, buf.len())
+                    std::slice::from_raw_parts_mut(buf.as_mut_ptr().cast::<jbyte>(), buf.len())
                 };
 
                 env.get_byte_array_region(byte_array, 0, buf_slice)?;
 
-                Ok(bytes_read as usize)
+                Ok(usize::try_from(bytes_read)?)
             } else {
                 Err(anyhow!("JNI read failed: {bytes_read}"))
             }
@@ -134,7 +129,7 @@ impl<'a> SerialPortReadWrite<'a> {
 
     fn write(&mut self, buf: &[u8]) -> anyhow::Result<usize> {
         let mut borrowed_actx = self.actx.borrow_mut();
-        let actx = borrowed_actx.deref_mut();
+        let actx = &mut *borrowed_actx;
 
         let ret = actx.env.with_local_frame(4, |env| {
             let byte_array = env.byte_array_from_slice(buf)?;
@@ -144,7 +139,7 @@ impl<'a> SerialPortReadWrite<'a> {
                 .i()?;
 
             if bytes_written > 0 {
-                Ok(bytes_written as usize)
+                Ok(usize::try_from(bytes_written)?)
             } else {
                 Err(anyhow!("JNI write failed: {bytes_written}"))
             }
