@@ -308,7 +308,7 @@ impl<'a, T: ThermalPortOpener<'a> + 'a> ThermalImageProducer<'a, T> {
                 self.write_emissivity();
             }
 
-            if let Some(ref mut gray_image) = self.read_image() {
+            if let Some(ref gray_image) = self.read_image() {
                 self.produce_thermal_frame(gray_image);
             }
         }
