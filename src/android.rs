@@ -36,8 +36,7 @@ impl<'a> SerialPortOpener<'a> {
 
 impl<'a> PortOpener<'a> for SerialPortOpener<'a> {
     fn open(&mut self) -> anyhow::Result<Box<dyn ReadWrite + 'a>> {
-        let mut borrowed_actx = self.actx.borrow_mut();
-        let actx = &mut *borrowed_actx;
+        let actx = &mut *self.actx.borrow_mut();
 
         let ret = actx.env.with_local_frame(4, |env| {
             let class_loader = env
@@ -96,8 +95,7 @@ impl<'a> SerialPortReadWrite<'a> {
     }
 
     fn read(&mut self, buf: &mut [u8]) -> anyhow::Result<usize> {
-        let mut borrowed_actx = self.actx.borrow_mut();
-        let actx = &mut *borrowed_actx;
+        let actx = &mut *self.actx.borrow_mut();
 
         let ret = actx.env.with_local_frame(4, |env| {
             let byte_array = env.new_byte_array(i32::try_from(buf.len())?)?;
@@ -128,8 +126,7 @@ impl<'a> SerialPortReadWrite<'a> {
     }
 
     fn write(&mut self, buf: &[u8]) -> anyhow::Result<usize> {
-        let mut borrowed_actx = self.actx.borrow_mut();
-        let actx = &mut *borrowed_actx;
+        let actx = &mut *self.actx.borrow_mut();
 
         let ret = actx.env.with_local_frame(4, |env| {
             let byte_array = env.byte_array_from_slice(buf)?;
