@@ -41,7 +41,7 @@ extern "Rust" fn android_main(app: AndroidApp) {
     use egui_winit::winit::platform::android::EventLoopBuilderExtAndroid;
 
     android_logger::init_once(
-        android_logger::Config::default().with_max_level(log::LevelFilter::Debug),
+        android_logger::Config::default().with_max_level(log::LevelFilter::Info),
     );
 
     let _ = ANDROID_APP.set(app.clone());
