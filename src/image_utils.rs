@@ -8,8 +8,12 @@ pub enum Flip {
     Vertical,
 }
 
-impl<T: image2::Type, C: image2::Color, U: image2::Type, D: image2::Color>
-    image2::Filter<T, C, U, D> for Flip
+impl<T, C, U, D> image2::Filter<T, C, U, D> for Flip
+where
+    T: image2::Type,
+    C: image2::Color,
+    U: image2::Type,
+    D: image2::Color,
 {
     fn compute_at(
         &self,

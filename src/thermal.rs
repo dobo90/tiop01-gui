@@ -148,7 +148,7 @@ pub struct Frame {
     pub max: f64,
 }
 
-pub struct ImageProducer<'a, T: PortOpener<'a> + 'a> {
+pub struct ImageProducer<'a, T> {
     opener: T,
     rw: Option<Box<dyn ReadWrite + 'a>>,
     settings: Settings,
@@ -159,7 +159,10 @@ pub struct ImageProducer<'a, T: PortOpener<'a> + 'a> {
     egui_ctx: egui::Context,
 }
 
-impl<'a, T: PortOpener<'a> + 'a> ImageProducer<'a, T> {
+impl<'a, T> ImageProducer<'a, T>
+where
+    T: PortOpener<'a> + 'a,
+{
     pub fn new(
         egui_ctx: egui::Context,
         sender: Sender<ProducerMessage>,

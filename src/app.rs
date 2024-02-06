@@ -101,12 +101,14 @@ fn producer_main(
     producer_main_loop(egui_ctx, worker_sender, worker_receiver, opener);
 }
 
-fn producer_main_loop<'a, T: PortOpener<'a> + 'a>(
+fn producer_main_loop<'a, T>(
     egui_ctx: egui::Context,
     worker_sender: Sender<ProducerMessage>,
     worker_receiver: Receiver<UiMessage>,
     opener: T,
-) {
+) where
+    T: PortOpener<'a> + 'a,
+{
     let mut producer = ImageProducer::new(egui_ctx, worker_sender, worker_receiver, opener);
     producer.main_loop();
 }
