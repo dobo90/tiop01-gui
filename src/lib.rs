@@ -3,6 +3,9 @@ mod android;
 #[cfg(not(target_os = "android"))]
 mod unix;
 
+#[cfg(target_os = "android")]
+use egui_winit::winit::platform::android::activity::AndroidApp;
+
 mod app;
 mod image_utils;
 mod thermal;
@@ -30,13 +33,18 @@ fn main() -> Result<(), eframe::Error> {
 }
 
 #[cfg(target_os = "android")]
+static ANDROID_APP: std::sync::OnceLock<AndroidApp> = std::sync::OnceLock::new();
+
+#[cfg(target_os = "android")]
 #[no_mangle]
-extern "Rust" fn android_main(app: egui_winit::winit::platform::android::activity::AndroidApp) {
+extern "Rust" fn android_main(app: AndroidApp) {
     use egui_winit::winit::platform::android::EventLoopBuilderExtAndroid;
 
     android_logger::init_once(
         android_logger::Config::default().with_max_level(log::LevelFilter::Debug),
     );
+
+    let _ = ANDROID_APP.set(app.clone());
 
     let native_options = NativeOptions {
         event_loop_builder: Some(Box::new(move |builder| {

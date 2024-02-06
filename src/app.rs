@@ -85,14 +85,16 @@ fn producer_main(
     worker_receiver: Receiver<UiMessage>,
 ) {
     use crate::android::{Context, SerialPortOpener};
-    use jni::objects::JObject;
+    use crate::ANDROID_APP;
 
+    use jni::objects::JObject;
     use std::cell::RefCell;
     use std::rc::Rc;
 
-    let ctx = ndk_context::android_context();
-    let jvm = unsafe { jni::JavaVM::from_raw(ctx.vm().cast()) }.unwrap();
-    let context = unsafe { JObject::from_raw(ctx.context().cast()) };
+    let app = ANDROID_APP.get().unwrap();
+
+    let jvm = unsafe { jni::JavaVM::from_raw(app.vm_as_ptr().cast()) }.unwrap();
+    let context = unsafe { JObject::from_raw(app.activity_as_ptr().cast()) };
     let env = jvm.attach_current_thread_permanently().unwrap();
 
     let actx = Context::new(env, context);

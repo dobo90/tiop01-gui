@@ -38,7 +38,6 @@ eframe = { version = "0.26", default-features = false, features = ["default_font
 egui-winit = { version = "0.26", default-features = false, features = ["android-game-activity"] }
 pollster = "0.3"
 android_logger = "0.13"
-ndk-context = "0.1"
 jni = "0.21"
 
 [patch.crates-io]
