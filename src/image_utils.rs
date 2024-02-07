@@ -1,7 +1,5 @@
 use crate::thermal;
 
-use scarlet::prelude::RGBColor;
-
 #[derive(Debug)]
 pub enum Flip {
     Horizontal,
@@ -62,7 +60,7 @@ pub fn generate_colormap_image(
             u16::try_from(width - 1).unwrap(),
             color_range,
         );
-        let color: RGBColor = cmap.transform_single(scaled_value);
+        let color = cmap.transform_single(scaled_value);
 
         pixel.copy_from_slice([color.int_r(), color.int_g(), color.int_b()]);
     });
