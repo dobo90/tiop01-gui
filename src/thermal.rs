@@ -7,6 +7,7 @@ use eframe::egui;
 use image2::Kernel;
 use itertools::{Itertools, MinMaxResult};
 use scarlet::colormap::{GradientColorMap, ListedColorMap};
+use std::io::Write;
 use std::sync::mpsc::{Receiver, Sender, TryRecvError};
 use std::time::Duration;
 use std::{io, thread};
@@ -139,7 +140,9 @@ impl Settings {
 pub trait ReadWrite: io::Read + io::Write {}
 
 pub trait PortOpener<'a> {
-    fn open(&mut self) -> anyhow::Result<Box<dyn ReadWrite + 'a>>;
+    type RW: ReadWrite + 'a;
+
+    fn open(&mut self) -> anyhow::Result<Self::RW>;
 }
 
 pub struct Frame {
@@ -148,9 +151,12 @@ pub struct Frame {
     pub max: f64,
 }
 
-pub struct ImageProducer<'a, T> {
+pub struct ImageProducer<'a, T>
+where
+    T: PortOpener<'a>,
+{
     opener: T,
-    rw: Option<Box<dyn ReadWrite + 'a>>,
+    rw: Option<T::RW>,
     settings: Settings,
     kernel: Option<Kernel>,
     colormap: Box<dyn scarlet::colormap::ColorMap<scarlet::color::RGBColor> + Sync>,
@@ -161,7 +167,7 @@ pub struct ImageProducer<'a, T> {
 
 impl<'a, T> ImageProducer<'a, T>
 where
-    T: PortOpener<'a> + 'a,
+    T: PortOpener<'a>,
 {
     pub fn new(
         egui_ctx: egui::Context,

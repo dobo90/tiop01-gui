@@ -109,7 +109,7 @@ fn producer_main_loop<'a, T>(
     worker_receiver: Receiver<UiMessage>,
     opener: T,
 ) where
-    T: PortOpener<'a> + 'a,
+    T: PortOpener<'a>,
 {
     let mut producer = ImageProducer::new(egui_ctx, worker_sender, worker_receiver, opener);
     producer.main_loop();

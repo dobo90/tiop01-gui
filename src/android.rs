@@ -35,7 +35,9 @@ impl<'a> SerialPortOpener<'a> {
 }
 
 impl<'a> PortOpener<'a> for SerialPortOpener<'a> {
-    fn open(&mut self) -> anyhow::Result<Box<dyn ReadWrite + 'a>> {
+    type RW = SerialPortReadWrite<'a>;
+
+    fn open(&mut self) -> anyhow::Result<Self::RW> {
         let actx = &mut *self.actx.borrow_mut();
 
         let ret = actx.env.with_local_frame(4, |env| {
@@ -72,10 +74,10 @@ impl<'a> PortOpener<'a> for SerialPortOpener<'a> {
             if rw.is_null() {
                 Err(anyhow!("open has returned null"))
             } else {
-                Ok(Box::new(SerialPortReadWrite::new(
+                Ok(SerialPortReadWrite::new(
                     Rc::clone(&self.actx),
                     env.new_global_ref(rw)?,
-                )))
+                ))
             }
         });
 

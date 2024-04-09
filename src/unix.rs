@@ -16,7 +16,7 @@ impl<'a> SerialPortOpener<'a> {
     }
 }
 
-struct ThermalReadWrite(Box<dyn SerialPort>);
+pub struct ThermalReadWrite(Box<dyn SerialPort>);
 
 impl io::Read for ThermalReadWrite {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize, io::Error> {
@@ -37,7 +37,9 @@ impl io::Write for ThermalReadWrite {
 impl ReadWrite for ThermalReadWrite {}
 
 impl<'a> PortOpener<'a> for SerialPortOpener<'a> {
-    fn open(&mut self) -> anyhow::Result<Box<dyn ReadWrite + 'a>> {
+    type RW = ThermalReadWrite;
+
+    fn open(&mut self) -> anyhow::Result<Self::RW> {
         let mut port_path: Option<String> = None;
 
         for port in serialport::available_ports()? {
@@ -55,7 +57,7 @@ impl<'a> PortOpener<'a> for SerialPortOpener<'a> {
                     .open();
 
                 match port {
-                    Ok(port) => Ok(Box::new(ThermalReadWrite(port))),
+                    Ok(port) => Ok(ThermalReadWrite(port)),
                     Err(e) => Err(anyhow!("Failed to open port: {e}")),
                 }
             }
