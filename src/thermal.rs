@@ -278,9 +278,9 @@ where
             let checksum: u8 = command.iter().sum();
             command[3] = checksum;
 
-            if let Err(err) = rw.write_all(&command) {
-                log::error!("Failed to write emissivity {err}");
-            }
+            let _ = rw
+                .write_all(&command)
+                .inspect_err(|e| log::error!("Failed to write emissivity {e}"));
         }
     }
 

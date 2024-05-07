@@ -54,10 +54,8 @@ impl<'a> PortOpener<'a> for SerialPortOpener<'a> {
                     .timeout(Duration::from_secs(1))
                     .open();
 
-                match port {
-                    Ok(port) => Ok(ThermalReadWrite(port)),
-                    Err(e) => Err(anyhow!("Failed to open port: {e}")),
-                }
+                port.map(ThermalReadWrite)
+                    .map_err(|e| anyhow!("Failed to open port: {e}"))
             }
             None => Err(anyhow!("Failed to find serial port")),
         }

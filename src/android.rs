@@ -81,13 +81,7 @@ impl<'a> PortOpener<'a> for SerialPortOpener<'a> {
             }
         });
 
-        match ret {
-            Ok(ret) => Ok(ret),
-            Err(e) => {
-                log::error!("SerialPortOpener::open failed: {e}");
-                Err(e)
-            }
-        }
+        ret.inspect_err(|e| log::error!("SerialPortOpener::open failed: {e}"))
     }
 }
 
@@ -121,10 +115,7 @@ impl<'a> SerialPortReadWrite<'a> {
             }
         });
 
-        match ret {
-            Ok(ret) => Ok(ret),
-            Err(e) => Err(anyhow!("{e}")),
-        }
+        ret.map_err(|e| anyhow!("{e}"))
     }
 
     fn write(&mut self, buf: &[u8]) -> anyhow::Result<usize> {
@@ -144,34 +135,23 @@ impl<'a> SerialPortReadWrite<'a> {
             }
         });
 
-        match ret {
-            Ok(ret) => Ok(ret),
-            Err(e) => Err(anyhow!("{e}")),
-        }
+        ret.map_err(|e| anyhow!("{e}"))
     }
 }
 
 impl<'a> io::Read for SerialPortReadWrite<'a> {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize, io::Error> {
-        match self.read(buf) {
-            Ok(n) => Ok(n),
-            Err(e) => {
-                log::error!("SerialPortReadWrite::read failed: {e}");
-                Err(io::ErrorKind::Other.into())
-            }
-        }
+        self.read(buf)
+            .inspect_err(|e| log::error!("SerialPortReadWrite::read failed: {e}"))
+            .or(Err(io::ErrorKind::Other.into()))
     }
 }
 
 impl<'a> io::Write for SerialPortReadWrite<'a> {
     fn write(&mut self, buf: &[u8]) -> Result<usize, io::Error> {
-        match self.write(buf) {
-            Ok(n) => Ok(n),
-            Err(e) => {
-                log::error!("SerialPortReadWrite::write failed: {e}");
-                Err(io::ErrorKind::Other.into())
-            }
-        }
+        self.write(buf)
+            .inspect_err(|e| log::error!("SerialPortReadWrite::write failed: {e}"))
+            .or(Err(io::ErrorKind::Other.into()))
     }
 
     fn flush(&mut self) -> io::Result<()> {
