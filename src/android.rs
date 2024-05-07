@@ -1,6 +1,6 @@
 use std::{cell::RefCell, io, ops::Deref, rc::Rc};
 
-use crate::thermal::{PortOpener, ReadWrite};
+use crate::thermal::PortOpener;
 
 use anyhow::anyhow;
 use jni::{
@@ -178,5 +178,3 @@ impl<'a> io::Write for SerialPortReadWrite<'a> {
         Ok(())
     }
 }
-
-impl<'a> ReadWrite for SerialPortReadWrite<'a> {}

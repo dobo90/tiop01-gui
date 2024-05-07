@@ -137,10 +137,8 @@ impl Settings {
     }
 }
 
-pub trait ReadWrite: io::Read + io::Write {}
-
 pub trait PortOpener<'a> {
-    type RW: ReadWrite + 'a;
+    type RW: io::Read + io::Write + 'a;
 
     fn open(&mut self) -> anyhow::Result<Self::RW>;
 }

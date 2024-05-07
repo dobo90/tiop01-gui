@@ -1,4 +1,4 @@
-use crate::thermal::{PortOpener, ReadWrite};
+use crate::thermal::PortOpener;
 
 use anyhow::anyhow;
 use serialport::SerialPort;
@@ -33,8 +33,6 @@ impl io::Write for ThermalReadWrite {
         self.0.flush()
     }
 }
-
-impl ReadWrite for ThermalReadWrite {}
 
 impl<'a> PortOpener<'a> for SerialPortOpener<'a> {
     type RW = ThermalReadWrite;
