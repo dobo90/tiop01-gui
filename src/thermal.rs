@@ -190,6 +190,7 @@ where
         }
     }
 
+    #[profiling::function]
     fn ensure_port_opened(&mut self) {
         if self.rw.is_some() {
             return;
@@ -210,6 +211,7 @@ where
         }
     }
 
+    #[profiling::function]
     fn read_image(&mut self) -> Option<thermal::GrayImage> {
         let mut imgbuf = thermal::GrayImage::new(THERMAL_IMAGE_SIZE);
 
@@ -233,34 +235,44 @@ where
         }
     }
 
+    #[profiling::function]
     fn produce_thermal_frame(&self, gray_image: &thermal::GrayImage) {
-        let filtered = self
-            .kernel
-            .as_ref()
-            .map(|kernel| gray_image.run(kernel.clone(), None));
+        let filtered = {
+            profiling::scope!("filter");
+            self.kernel
+                .as_ref()
+                .map(|kernel| gray_image.run(kernel.clone(), None))
+        };
 
         let filtered = filtered.as_ref().unwrap_or(gray_image);
         let color_range = self.settings.color_range;
 
-        if let MinMaxResult::MinMax(min, max) = filtered
-            .iter()
-            .map(|(_pt, data)| data.as_slice()[0])
-            .minmax()
-        {
+        if let MinMaxResult::MinMax(min, max) = {
+            profiling::scope!("minmax");
+            filtered
+                .iter()
+                .map(|(_pt, data)| data.as_slice()[0])
+                .minmax()
+        } {
             let mut imgbuf = thermal::RgbImage::new(THERMAL_IMAGE_SIZE);
 
-            imgbuf.each_pixel_mut(|pt, pixel| {
-                let current_pixel = filtered.get([pt.x, pt.y]).as_slice()[0];
-                let scaled_value = map_to_scaled_value(current_pixel, min, max, color_range);
+            {
+                profiling::scope!("colorize");
+                imgbuf.each_pixel_mut(|pt, pixel| {
+                    let current_pixel = filtered.get([pt.x, pt.y]).as_slice()[0];
+                    let scaled_value = map_to_scaled_value(current_pixel, min, max, color_range);
 
-                let color = self.colormap.transform_single(scaled_value);
-                pixel.copy_from_slice([color.int_r(), color.int_g(), color.int_b()]);
-            });
+                    let color = self.colormap.transform_single(scaled_value);
+                    pixel.copy_from_slice([color.int_r(), color.int_g(), color.int_b()]);
+                });
+            }
 
             if self.settings.flip_horizontally {
+                profiling::scope!("horizontal flip");
                 imgbuf = imgbuf.run(image_utils::Flip::Horizontal, None);
             }
             if self.settings.flip_vertically {
+                profiling::scope!("vertical flip");
                 imgbuf = imgbuf.run(image_utils::Flip::Vertical, None);
             }
 
@@ -272,6 +284,7 @@ where
         }
     }
 
+    #[profiling::function]
     fn write_emissivity(&mut self) {
         if let Some(ref mut rw) = self.rw {
             let mut command: [u8; 4] = [0x55, 0x01, self.settings.emissivity, 0x00];
@@ -284,6 +297,7 @@ where
         }
     }
 
+    #[profiling::function]
     fn send_message_to_ui(&self, message: ProducerMessage) {
         if self.sender.send(message).is_ok() {
             self.egui_ctx.request_repaint();
@@ -295,6 +309,7 @@ where
             self.ensure_port_opened();
 
             let new_settings: Option<Settings> = {
+                profiling::scope!("receive settings");
                 let mut received_settings: Option<Settings> = None;
 
                 loop {
@@ -310,6 +325,7 @@ where
             };
 
             if let Some(ref new_settings) = new_settings {
+                profiling::scope!("apply settings");
                 self.settings = new_settings.clone();
                 self.kernel = self.settings.get_kernel();
                 self.colormap = self.settings.colormap.get_colormap();
@@ -319,6 +335,8 @@ where
             if let Some(ref gray_image) = self.read_image() {
                 self.produce_thermal_frame(gray_image);
             }
+
+            profiling::finish_frame!();
         }
     }
 }

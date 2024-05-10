@@ -12,7 +12,18 @@ mod thermal;
 
 use eframe::NativeOptions;
 
+#[cfg(feature = "profiling")]
+static PUFFIN_SERVER: std::sync::OnceLock<puffin_http::Server> = std::sync::OnceLock::new();
+
 fn _main(native_options: NativeOptions) -> eframe::Result<()> {
+    #[cfg(feature = "profiling")]
+    {
+        puffin::set_scopes_on(true);
+
+        let server_addr = format!("127.0.0.1:{}", puffin_http::DEFAULT_PORT);
+        let _ = PUFFIN_SERVER.set(puffin_http::Server::new(&server_addr).unwrap());
+    }
+
     eframe::run_native(
         "Tiop01",
         native_options,

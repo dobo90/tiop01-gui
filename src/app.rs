@@ -124,9 +124,12 @@ impl App {
         let (worker_sender, ui_receiver): (Sender<ProducerMessage>, Receiver<ProducerMessage>) =
             mpsc::channel();
 
-        thread::spawn(move || {
-            producer_main(egui_ctx, worker_sender, worker_receiver);
-        });
+        thread::Builder::new()
+            .name("thermal".into())
+            .spawn(move || {
+                producer_main(egui_ctx, worker_sender, worker_receiver);
+            })
+            .unwrap();
 
         let settings = Settings::default();
         let thermal_image_texture = Self::load_texture_from_black_thermal_image(&cc.egui_ctx);
