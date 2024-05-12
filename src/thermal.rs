@@ -269,11 +269,11 @@ where
 
             if self.settings.flip_horizontally {
                 profiling::scope!("horizontal flip");
-                imgbuf = imgbuf.run(image_utils::Flip::Horizontal, None);
+                imgbuf.run_in_place(image_utils::Flip::Horizontal);
             }
             if self.settings.flip_vertically {
                 profiling::scope!("vertical flip");
-                imgbuf = imgbuf.run(image_utils::Flip::Vertical, None);
+                imgbuf.run_in_place(image_utils::Flip::Vertical);
             }
 
             self.send_message_to_ui(ProducerMessage::Frame(Frame {
