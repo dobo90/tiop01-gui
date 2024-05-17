@@ -287,9 +287,12 @@ where
     #[profiling::function]
     fn write_emissivity(&mut self) {
         if let Some(ref mut rw) = self.rw {
-            let mut command: [u8; 4] = [0x55, 0x01, self.settings.emissivity, 0x00];
-            let checksum: u8 = command.iter().sum();
-            command[3] = checksum;
+            let command: [u8; 4] = [
+                0x55,
+                0x01,
+                self.settings.emissivity,
+                0x56 + self.settings.emissivity,
+            ];
 
             let _ = rw
                 .write_all(&command)
