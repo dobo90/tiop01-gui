@@ -5,7 +5,6 @@ use crate::thermal;
 use byteorder::{LittleEndian, ReadBytesExt};
 use eframe::egui;
 use image2::Kernel;
-use itertools::{Itertools, MinMaxResult};
 use scarlet::colormap::{GradientColorMap, ListedColorMap};
 use std::io::Write;
 use std::sync::mpsc::{Receiver, Sender, TryRecvError};
@@ -247,12 +246,11 @@ where
         let filtered = filtered.as_ref().unwrap_or(gray_image);
         let color_range = self.settings.color_range;
 
-        if let MinMaxResult::MinMax(min, max) = {
+        if let Some((min, max)) = {
             profiling::scope!("minmax");
-            filtered
-                .iter()
-                .map(|(_pt, data)| data.as_slice()[0])
-                .minmax()
+            let min = filtered.iter().map(|(_pt, data)| data.as_slice()[0]).min();
+            let max = filtered.iter().map(|(_pt, data)| data.as_slice()[0]).max();
+            min.zip(max)
         } {
             let mut imgbuf = thermal::RgbImage::new(THERMAL_IMAGE_SIZE);
 

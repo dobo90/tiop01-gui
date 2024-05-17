@@ -23,7 +23,6 @@ required-features = ["unix"]
 log = "0.4"
 byteorder = "1.5"
 scarlet = "1.2"
-itertools = "0.12"
 strum = "0.26"
 strum_macros = "0.26"
 image2 = { version = "1.9", default-features = false, features = [] }
