@@ -4,7 +4,7 @@
 This is a POC application for TIOP01 thermal cameras. Those cheap cameras are available on AliExpress. They communicate via CDC (ACM) USB protocol and provide 32x32 images two bytes per pixel. 
 
 ## Compiling
-### Linux
+### Linux/Windows
 ```
 cargo build --features=desktop
 ```

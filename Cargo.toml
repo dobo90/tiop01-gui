@@ -31,8 +31,13 @@ profiling = { version = "1.0", default-features = false, features = ["profile-wi
 puffin = "0.19"
 puffin_http = { version = "0.16", optional = true }
 
-[target.'cfg(not(target_os = "android"))'.dependencies]
+[target.'cfg(target_os = "windows")'.dependencies]
+eframe = { version = "0.27", default-features = false, features = ["default_fonts", "wgpu"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
 eframe = { version = "0.27", default-features = false, features = ["default_fonts", "wgpu", "wayland"] }
+
+[target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.11"
 serialport = "4.2"
 
