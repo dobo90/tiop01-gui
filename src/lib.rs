@@ -1,7 +1,7 @@
 #[cfg(target_os = "android")]
 mod android;
 #[cfg(not(target_os = "android"))]
-mod unix;
+mod desktop;
 
 #[cfg(target_os = "android")]
 use egui_winit::winit::platform::android::activity::AndroidApp;

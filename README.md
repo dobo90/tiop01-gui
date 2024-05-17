@@ -6,7 +6,7 @@ This is a POC application for TIOP01 thermal cameras. Those cheap cameras are av
 ## Compiling
 ### Linux
 ```
-cargo build --features=unix
+cargo build --features=desktop
 ```
 ### Android
 Setup the environment:

@@ -7,7 +7,7 @@ edition = "2021"
 
 [features]
 default = []
-unix = []
+desktop = []
 profiling = ["dep:puffin_http"]
 
 [lib]
@@ -17,7 +17,7 @@ crate_type = ["cdylib"]
 [[bin]]
 path = "src/lib.rs"
 name = "tiop01-gui"
-required-features = ["unix"]
+required-features = ["desktop"]
 
 [dependencies]
 log = "0.4"

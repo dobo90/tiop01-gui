@@ -73,7 +73,7 @@ fn producer_main(
     worker_sender: Sender<ProducerMessage>,
     worker_receiver: Receiver<UiMessage>,
 ) {
-    let opener = crate::unix::SerialPortOpener::new();
+    let opener = crate::desktop::SerialPortOpener::new();
 
     producer_main_loop(egui_ctx, worker_sender, worker_receiver, opener);
 }
