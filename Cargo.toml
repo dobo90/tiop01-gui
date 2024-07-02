@@ -12,7 +12,7 @@ profiling = ["dep:puffin_http"]
 
 [lib]
 name = "main"
-crate_type = ["cdylib"]
+crate-type = ["cdylib"]
 
 [[bin]]
 path = "src/lib.rs"
