@@ -1,4 +1,6 @@
-use crate::thermal;
+use eframe::emath::Numeric;
+
+use crate::thermal::{self, ColorRange};
 
 #[derive(Debug)]
 pub enum Flip {
@@ -38,8 +40,8 @@ pub fn generate_black_image(width: usize, height: usize) -> thermal::RgbImage {
     imgbuf
 }
 
-pub fn map_to_scaled_value(input: u16, min: u16, max: u16, color_range: u8) -> f64 {
-    let color_range = f64::from(color_range) / 100.0;
+pub fn map_to_scaled_value(input: u16, min: u16, max: u16, color_range: ColorRange) -> f64 {
+    let color_range = color_range.to_f64() / 100.0;
     let value = f64::from(input - min) / f64::from(max - min);
 
     ((1.0 - color_range) / 2.0) + value * color_range
@@ -49,7 +51,7 @@ pub fn generate_colormap_image(
     width: usize,
     height: usize,
     cmap: &(dyn scarlet::colormap::ColorMap<scarlet::color::RGBColor> + Sync),
-    color_range: u8,
+    color_range: ColorRange,
 ) -> thermal::RgbImage {
     let mut imgbuf = thermal::RgbImage::new([width, height]);
 

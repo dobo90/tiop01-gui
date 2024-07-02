@@ -1,7 +1,7 @@
 use crate::image_utils;
 use crate::thermal::{
-    self, ColorMap, EdgeStrategy, FilteringMethod, Frame, ImageProducer, PortOpener, Settings,
-    THERMAL_IMAGE_HEIGHT, THERMAL_IMAGE_WIDTH,
+    self, ColorMap, ColorRange, EdgeStrategy, FilteringMethod, Frame, ImageProducer, PortOpener,
+    Settings, THERMAL_IMAGE_HEIGHT, THERMAL_IMAGE_WIDTH,
 };
 
 use std::fmt::Display;
@@ -174,13 +174,13 @@ impl App {
     fn load_texture_from_colormap_image(
         ctx: &egui::Context,
         cmap: &(dyn scarlet::colormap::ColorMap<scarlet::color::RGBColor> + Sync),
-        color_range: u8,
+        color_range: ColorRange,
     ) -> egui::TextureHandle {
         let image = image_utils::generate_colormap_image(256, 1, cmap, color_range);
         Self::load_texture_from_image(ctx, "colormap", &image)
     }
 
-    fn regenerate_colormap(&mut self, ctx: &egui::Context, color_range: u8) {
+    fn regenerate_colormap(&mut self, ctx: &egui::Context, color_range: ColorRange) {
         self.colormap_texture = Self::load_texture_from_colormap_image(
             ctx,
             &*self.settings.colormap.get_colormap(),
@@ -224,9 +224,12 @@ impl App {
                 .text("Emissivity"),
         );
         ui.add(
-            egui::Slider::new(&mut self.settings.color_range, 0..=100)
-                .suffix("%")
-                .text("Color range"),
+            egui::Slider::new(
+                &mut self.settings.color_range,
+                ColorRange::MIN..=ColorRange::MAX,
+            )
+            .suffix("%")
+            .text("Color range"),
         );
     }
 }

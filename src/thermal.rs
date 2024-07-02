@@ -4,6 +4,7 @@ use crate::thermal;
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use eframe::egui;
+use eframe::emath::Numeric;
 use image2::Kernel;
 use scarlet::colormap::{GradientColorMap, ListedColorMap};
 use std::io::Write;
@@ -99,6 +100,23 @@ impl ColorMap {
     }
 }
 
+#[derive(Debug, PartialEq, PartialOrd, Clone, Copy)]
+pub struct ColorRange(u8);
+
+impl Numeric for ColorRange {
+    const INTEGRAL: bool = true;
+    const MIN: Self = ColorRange(0);
+    const MAX: Self = ColorRange(100);
+
+    fn from_f64(num: f64) -> Self {
+        Self(u8::from_f64(num))
+    }
+
+    fn to_f64(self) -> f64 {
+        u8::to_f64(self.0)
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct Settings {
     pub flip_horizontally: bool,
@@ -107,7 +125,7 @@ pub struct Settings {
     pub edge_strategy: EdgeStrategy,
     pub colormap: ColorMap,
     pub emissivity: u8,
-    pub color_range: u8,
+    pub color_range: ColorRange,
 }
 
 impl Default for Settings {
@@ -119,7 +137,7 @@ impl Default for Settings {
             edge_strategy: EdgeStrategy::Extend,
             colormap: ColorMap::Turbo,
             emissivity: 95,
-            color_range: 100,
+            color_range: ColorRange(100),
         }
     }
 }
