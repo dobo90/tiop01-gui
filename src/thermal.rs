@@ -101,6 +101,29 @@ impl ColorMap {
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Clone, Copy)]
+pub struct Emissivity(u8);
+
+impl Numeric for Emissivity {
+    const INTEGRAL: bool = true;
+    const MIN: Self = Emissivity(10);
+    const MAX: Self = Emissivity(100);
+
+    fn from_f64(num: f64) -> Self {
+        Self(u8::from_f64(num))
+    }
+
+    fn to_f64(self) -> f64 {
+        u8::to_f64(self.0)
+    }
+}
+
+impl From<Emissivity> for u8 {
+    fn from(value: Emissivity) -> Self {
+        value.0
+    }
+}
+
+#[derive(Debug, PartialEq, PartialOrd, Clone, Copy)]
 pub struct ColorRange(u8);
 
 impl Numeric for ColorRange {
@@ -124,7 +147,7 @@ pub struct Settings {
     pub filtering_method: FilteringMethod,
     pub edge_strategy: EdgeStrategy,
     pub colormap: ColorMap,
-    pub emissivity: u8,
+    pub emissivity: Emissivity,
     pub color_range: ColorRange,
 }
 
@@ -136,7 +159,7 @@ impl Default for Settings {
             filtering_method: FilteringMethod::Box3x3,
             edge_strategy: EdgeStrategy::Extend,
             colormap: ColorMap::Turbo,
-            emissivity: 95,
+            emissivity: Emissivity(95),
             color_range: ColorRange(100),
         }
     }
@@ -306,8 +329,8 @@ where
             let command: [u8; 4] = [
                 0x55,
                 0x01,
-                self.settings.emissivity,
-                0x56 + self.settings.emissivity,
+                self.settings.emissivity.into(),
+                0x56 + u8::from(self.settings.emissivity),
             ];
 
             let _ = rw

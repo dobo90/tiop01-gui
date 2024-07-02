@@ -1,7 +1,7 @@
 use crate::image_utils;
 use crate::thermal::{
-    self, ColorMap, ColorRange, EdgeStrategy, FilteringMethod, Frame, ImageProducer, PortOpener,
-    Settings, THERMAL_IMAGE_HEIGHT, THERMAL_IMAGE_WIDTH,
+    self, ColorMap, ColorRange, EdgeStrategy, Emissivity, FilteringMethod, Frame, ImageProducer,
+    PortOpener, Settings, THERMAL_IMAGE_HEIGHT, THERMAL_IMAGE_WIDTH,
 };
 
 use std::fmt::Display;
@@ -13,6 +13,7 @@ use std::thread;
 use eframe::egui::load::SizedTexture;
 use eframe::egui::Ui;
 use eframe::egui::{self, TextureOptions};
+use eframe::emath::Numeric;
 use strum::IntoEnumIterator;
 
 pub enum ProducerMessage {
@@ -219,9 +220,12 @@ impl App {
         );
         ui.combobox_from_iter(ColorMap::iter(), &mut self.settings.colormap, "Color map");
         ui.add(
-            egui::Slider::new(&mut self.settings.emissivity, 10..=100)
-                .prefix("0.")
-                .text("Emissivity"),
+            egui::Slider::new(
+                &mut self.settings.emissivity,
+                Emissivity::MIN..=Emissivity::MAX,
+            )
+            .prefix("0.")
+            .text("Emissivity"),
         );
         ui.add(
             egui::Slider::new(
