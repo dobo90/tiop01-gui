@@ -39,13 +39,13 @@ eframe = { version = "0.27", default-features = false, features = ["default_font
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.11"
-serialport = "4.2"
+serialport = "4.4"
 
 [target.'cfg(target_os = "android")'.dependencies]
 eframe = { version = "0.27", default-features = false, features = ["default_fonts", "wgpu", "android-native-activity"] }
 egui-winit = { version = "0.27", default-features = false, features = ["android-native-activity"] }
 pollster = "0.3"
-android_logger = "0.13"
+android_logger = "0.14"
 jni = "0.21"
 
 [patch.crates-io]
