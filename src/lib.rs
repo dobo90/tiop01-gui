@@ -29,7 +29,7 @@ fn _main(native_options: NativeOptions) -> eframe::Result<()> {
     eframe::run_native(
         "Tiop01",
         native_options,
-        Box::new(|cc| Box::new(app::App::new(cc))),
+        Box::new(|cc| Ok(Box::new(app::App::new(cc)))),
     )
 }
 

@@ -204,7 +204,7 @@ impl App {
     }
 
     fn settings(&mut self, ui: &mut Ui) {
-        egui::widgets::global_dark_light_mode_buttons(ui);
+        egui::widgets::global_theme_preference_buttons(ui);
         ui.checkbox(&mut self.settings.flip_vertically, "Flip vertically");
         ui.checkbox(&mut self.settings.flip_horizontally, "Flip horizontally");
 
