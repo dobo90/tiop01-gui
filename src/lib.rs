@@ -51,8 +51,6 @@ static ANDROID_APP: std::sync::OnceLock<AndroidApp> = std::sync::OnceLock::new()
 #[cfg(target_os = "android")]
 #[no_mangle]
 extern "Rust" fn android_main(app: AndroidApp) {
-    use egui_winit::winit::platform::android::EventLoopBuilderExtAndroid;
-
     android_logger::init_once(
         android_logger::Config::default().with_max_level(log::LevelFilter::Info),
     );
@@ -60,9 +58,7 @@ extern "Rust" fn android_main(app: AndroidApp) {
     let _ = ANDROID_APP.set(app.clone());
 
     let native_options = NativeOptions {
-        event_loop_builder: Some(Box::new(move |builder| {
-            builder.with_android_app(app);
-        })),
+        android_app: Some(app),
         ..eframe::NativeOptions::default()
     };
 
