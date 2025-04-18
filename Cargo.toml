@@ -23,8 +23,8 @@ required-features = ["desktop"]
 log = "0.4"
 byteorder = "1.5"
 scarlet = "1.2"
-strum = "0.26"
-strum_macros = "0.26"
+strum = "0.27"
+strum_macros = "0.27"
 image2 = { version = "1.9", default-features = false, features = [] }
 anyhow = "1.0"
 profiling = { version = "1.0", default-features = false, features = ["profile-with-puffin", "procmacros"]}
@@ -32,20 +32,20 @@ puffin = "0.19"
 puffin_http = { version = "0.16", optional = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
-eframe = { version = "0.30", default-features = false, features = ["default_fonts", "wgpu"] }
+eframe = { version = "0.31", default-features = false, features = ["default_fonts", "wgpu"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-eframe = { version = "0.30", default-features = false, features = ["default_fonts", "wgpu", "wayland"] }
+eframe = { version = "0.31", default-features = false, features = ["default_fonts", "wgpu", "wayland"] }
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.11"
 serialport = "4.7"
 
 [target.'cfg(target_os = "android")'.dependencies]
-eframe = { version = "0.29", default-features = false, features = ["default_fonts", "wgpu", "android-native-activity"] }
-egui-winit = { version = "0.29", default-features = false, features = ["android-native-activity"] }
+eframe = { version = "0.31", default-features = false, features = ["default_fonts", "wgpu", "android-native-activity"] }
+egui-winit = { version = "0.31", default-features = false, features = ["android-native-activity"] }
 pollster = "0.4"
-android_logger = "0.14"
+android_logger = "0.15"
 jni = "0.21"
 
 [patch.crates-io]
